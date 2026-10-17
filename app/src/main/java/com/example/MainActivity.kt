@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import com.example.game.ui.screens.AchievementsScreen
 import com.example.game.ui.screens.BoosterShopScreen
 import com.example.game.ui.screens.DailyRewardsScreen
+import com.example.game.ui.screens.EventsScreen
 import com.example.game.ui.screens.GameplayScreen
 import com.example.game.ui.screens.HomeScreen
 import com.example.game.ui.screens.LuckySpinScreen
@@ -60,10 +61,10 @@ class MainActivity : ComponentActivity() {
 fun BubbleKingdomApp(viewModel: GameViewModel) {
     val currentScreen by viewModel.currentScreen.collectAsState()
 
-    // Handle Android system Back button appropriately for each screen
     BackHandler(enabled = currentScreen != GameScreen.HOME && currentScreen != GameScreen.SPLASH) {
         when (currentScreen) {
             GameScreen.GAMEPLAY -> viewModel.navigateTo(GameScreen.WORLD_MAP)
+            GameScreen.PET_SANCTUARY, GameScreen.ACHIEVEMENTS -> viewModel.navigateTo(GameScreen.EVENTS)
             else -> viewModel.navigateTo(GameScreen.HOME)
         }
     }
@@ -71,6 +72,7 @@ fun BubbleKingdomApp(viewModel: GameViewModel) {
     when (currentScreen) {
         GameScreen.SPLASH -> SplashScreen(viewModel = viewModel)
         GameScreen.HOME -> HomeScreen(viewModel = viewModel)
+        GameScreen.EVENTS -> EventsScreen(viewModel = viewModel)
         GameScreen.WORLD_MAP -> WorldMapScreen(viewModel = viewModel)
         GameScreen.GAMEPLAY -> GameplayScreen(viewModel = viewModel)
         GameScreen.PET_SANCTUARY -> PetSanctuaryScreen(viewModel = viewModel)

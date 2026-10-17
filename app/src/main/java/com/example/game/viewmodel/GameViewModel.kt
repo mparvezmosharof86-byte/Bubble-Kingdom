@@ -42,7 +42,8 @@ enum class GameScreen {
     ACHIEVEMENTS,
     DAILY_REWARDS,
     LUCKY_SPIN,
-    SETTINGS
+    SETTINGS,
+    EVENTS // নতুন ইভেন্ট স্ক্রিন
 }
 
 enum class PlayState {
@@ -105,7 +106,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private var nextBubbleId = 100L
 
     init {
-        // Sync sound settings
         soundManager.sfxVolume = _saveState.value.sfxVolume
         soundManager.musicVolume = _saveState.value.musicVolume
         soundManager.hapticsEnabled = _saveState.value.hapticsEnabled
@@ -126,7 +126,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         particleSystem.clear()
         currentProjectile = null
 
-        // Populate hex grid with level data
         for (r in 0 until levelDef.grid.size) {
             val row = levelDef.grid[r]
             for (c in 0 until row.size) {
@@ -170,7 +169,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun generateShooterBubble(levelDef: LevelDefinition): GameBubble {
-        // Pick from colors present in the grid if available, otherwise allowed level colors
         val colorsInGrid = mutableSetOf<BubbleColor>()
         for (r in 0 until hexGrid.maxRows) {
             for (c in 0 until hexGrid.getColsForRow(r)) {
@@ -204,7 +202,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (_gameplayState.value.playState != PlayState.READY && _gameplayState.value.playState != PlayState.AIMING) return
 
         if (!repository.consumeBooster(booster)) {
-            return // Not enough in inventory
+            return
         }
         _saveState.value = repository.getState()
         voiceManager.onBoosterUsed(booster.title)
@@ -265,14 +263,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val dx = touchX - shooterX
         val dy = touchY - shooterY
 
-        // We only aim upward (dy < -20)
         if (dy >= -20f) {
             _gameplayState.update { it.copy(aimTrajectory = emptyList(), playState = PlayState.READY) }
             return
         }
 
         var angle = atan2(dy, dx)
-        // Clamp angle between -165° and -15° (aiming upwards towards top of screen)
         val minAngle = (-165.0 * PI / 180.0).toFloat()
         val maxAngle = (-15.0 * PI / 180.0).toFloat()
         angle = angle.coerceIn(minAngle, maxAngle)
@@ -331,12 +327,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        // Calculate initial launch velocity towards trajectory point 1
         val p1 = state.aimTrajectory[1]
         val dx = p1.x - shooterX
         val dy = p1.y - shooterY
         val angle = atan2(dy, dx)
-        val speed = 2100f // Fast, crisp projectile speed
+        val speed = 2100f
 
         currentProjectile = Projectile(
             x = shooterX,
@@ -373,18 +368,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     updatePhysics(dt)
                 }
 
-                delay(16) // ~60fps tick
+                delay(16)
             }
         }
     }
 
     private fun updatePhysics(dt: Float) {
-        val state = _gameplayState.value
-        val screenWidth = 720f // Virtual reference board width
+        val screenWidth = 720f
         val screenHeight = 1280f
-        val bubbleRadius = 45f // Virtual reference radius
+        val bubbleRadius = 45f
 
-        // Update particle and drop physics
         particleSystem.update(dt, screenHeight, screenWidth) { pointsScored ->
             addScore(pointsScored)
         }
@@ -395,11 +388,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         val proj = currentProjectile ?: return
 
-        // Step projectile movement
         proj.x += proj.vx * dt
         proj.y += proj.vy * dt
 
-        // Left / Right Wall reflection
         if (proj.x - bubbleRadius <= 0) {
             proj.x = bubbleRadius
             proj.vx = -proj.vx
@@ -410,7 +401,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             soundManager.playWallBounce()
         }
 
-        // Check Fireball straight pierce
         if (proj.boosterType == BoosterType.FIREBALL) {
             for (r in 0 until hexGrid.maxRows) {
                 for (c in 0 until hexGrid.getColsForRow(r)) {
@@ -429,13 +419,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        // Ceiling collision
         if (proj.y <= bubbleRadius) {
             attachAndResolve(proj, bubbleRadius, screenWidth)
             return
         }
 
-        // Collision with existing bubbles
         val collisionDistSq = (1.82f * bubbleRadius) * (1.82f * bubbleRadius)
         for (r in 0 until hexGrid.maxRows) {
             for (c in 0 until hexGrid.getColsForRow(r)) {
@@ -485,7 +473,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         when (booster) {
             BoosterType.BOMB_BUBBLE -> {
-                // Detonate 2-radius cluster
                 val bombNeighbors = hexGrid.getNeighbors(hitRow, hitCol).toMutableSet()
                 bombNeighbors.add(GridCoord(hitRow, hitCol))
                 for (nb in hexGrid.getNeighbors(hitRow, hitCol)) {
@@ -496,7 +483,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 soundManager.playBombExplosion()
             }
             BoosterType.LIGHTNING_BUBBLE -> {
-                // Clear entire row
                 for (c in 0 until hexGrid.getColsForRow(hitRow)) {
                     matchedCoords.add(GridCoord(hitRow, c))
                 }
@@ -504,7 +490,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 soundManager.playBombExplosion()
             }
             else -> {
-                // Normal or Rainbow match
                 val connected = hexGrid.findConnectedMatches(hitRow, hitCol)
                 if (connected.size >= 3 || bubble.type == BubbleType.RAINBOW) {
                     matchedCoords = connected.toMutableSet()
@@ -524,7 +509,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     particleSystem.addPopBurst(cx, cy, b.color)
                     soundManager.playBubblePop(b.color)
 
-                    // Check if pet freed!
                     if (b.type == BubbleType.PET && b.petId != null) {
                         petsRescuedThisTurn.add(b.petId)
                         particleSystem.addPetRescueCelebration(cx, cy)
@@ -542,7 +526,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val (popupX, popupY) = hexGrid.getCenter(centerCoord.row, centerCoord.col, bubbleRadius, screenWidth)
             particleSystem.addScorePopup(popupX, popupY, "+$points")
 
-            // Combos & Voices
             val newCombo = combo + 1
             if (newCombo >= 2) {
                 soundManager.playComboChime(newCombo)
@@ -551,7 +534,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 voiceManager.onMatch()
             }
 
-            // Detect and drop detached bubbles
             val detached = hexGrid.findDetachedBubbles()
             if (detached.isNotEmpty()) {
                 if (detached.size >= 4) {
@@ -581,11 +563,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
         } else {
-            // Reset combo multiplier on miss
             _gameplayState.update { it.copy(comboMultiplier = 1) }
         }
 
-        // Post-match state check: Victory, Defeat, or Next Shot
         checkEndConditions()
     }
 
@@ -593,7 +573,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val state = _gameplayState.value
         val level = state.currentLevel
 
-        // 1. Victory Check
         val isVictory = when (level.objective) {
             LevelObjective.RESCUE_PETS -> {
                 if (level.targetPetsCount > 0) {
@@ -615,16 +594,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        // 2. Defeat Check (Out of shots or lowest bubble exceeded safe boundary)
         val lowestRow = hexGrid.getLowestRow()
-        val isCeilingBreached = (lowestRow >= 16) // Board overflow (danger line)
+        val isCeilingBreached = (lowestRow >= 16)
 
         if (state.shotsRemaining <= 0 || isCeilingBreached) {
             handleDefeat()
             return
         }
 
-        // 3. Prepare Next Shot
         val nextShooter = generateShooterBubble(level)
         _gameplayState.update {
             it.copy(
@@ -639,7 +616,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val state = _gameplayState.value
         val level = state.currentLevel
 
-        // Star calculation
         val (s1, s2, s3) = level.starThresholds
         val stars = when {
             state.score >= s3 -> 3

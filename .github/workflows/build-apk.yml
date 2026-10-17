@@ -25,11 +25,17 @@ jobs:
         with:
           gradle-version: '9.3.1'
 
-      - name: Create dummy .env file
-        run: touch .env
+      - name: Prepare Keystore and Environment
+        run: |
+          touch .env
+          touch .env.example
+          # Generate debug.keystore if missing
+          keytool -genkeypair -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+          # Safe fallback for AI Studio debugConfig
+          sed -i 's/signingConfig = signingConfigs.getByName("debugConfig")/\/\/ signingConfig removed for CI/g' app/build.gradle.kts || true
 
       - name: Build Debug APK with Gradle
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: gradle assembleDebug --no-daemon --no-configuration-cache --stacktrace
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4

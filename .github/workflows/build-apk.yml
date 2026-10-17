@@ -25,26 +25,43 @@ jobs:
         with:
           gradle-version: '9.3.1'
 
-      - name: Prepare Keystore and Environment
+      - name: Locate and Prepare Project
         run: |
+          echo "=== Searching for settings.gradle.kts ==="
+          SETTINGS_FILE=$(find . -name "settings.gradle.kts" | head -n 1)
+
+          if [ -z "$SETTINGS_FILE" ]; then
+            echo "ERROR: settings.gradle.kts not found anywhere in repository!"
+            echo "Current files in repo:"
+            find . -maxdepth 3
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$SETTINGS_FILE")
+          echo "Project located in: $PROJECT_DIR"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+
+          cd "$PROJECT_DIR"
           touch .env
           touch .env.example
+
           # Generate debug.keystore
           keytool -genkeypair -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
-          # Safe fallback for debugConfig
+
+          # Fix configs for CI build
           sed -i 's/signingConfig = signingConfigs.getByName("debugConfig")/\/\/ removed for CI/g' app/build.gradle.kts || true
-          # Use pre-installed stable Android SDK 35 instead of uninstalled SDK 36 preview
           sed -i 's/compileSdk {.*}/compileSdk = 35/g' app/build.gradle.kts || true
           sed -i 's/targetSdk = 36/targetSdk = 35/g' app/build.gradle.kts || true
-          # Remove foojay resolver
           sed -i '/foojay-resolver-convention/d' settings.gradle.kts || true
 
       - name: Build Debug APK with Gradle
-        run: gradle assembleDebug --no-daemon --no-configuration-cache --stacktrace
+        run: |
+          cd "$PROJECT_DIR"
+          gradle assembleDebug --no-daemon --no-configuration-cache --stacktrace
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Bubble-Kingdom-Debug-APK
-          path: app/build/outputs/apk/debug/*.apk
+          path: '**/app/build/outputs/apk/debug/*.apk'
           retention-days: 7

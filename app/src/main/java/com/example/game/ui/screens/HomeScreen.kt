@@ -6,9 +6,12 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,8 +31,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Star
@@ -38,20 +43,25 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.game.ui.components.CoinPill
-import com.example.game.ui.components.GlossyButton
 import com.example.game.viewmodel.GameScreen
 import com.example.game.viewmodel.GameViewModel
 
@@ -62,15 +72,16 @@ fun HomeScreen(viewModel: GameViewModel) {
     val todayEpoch = System.currentTimeMillis() / (1000 * 60 * 60 * 24)
     val dailyGiftReady = todayEpoch > saveState.lastDailyClaimDay
 
-    val transition = rememberInfiniteTransition(label = "bubble_pulse")
-    val pulseScale by transition.animateFloat(
-        initialValue = 0.95f,
-        targetValue = 1.05f,
+    // Pulsing glow for notification alert dot
+    val transition = rememberInfiniteTransition(label = "pulse_anim")
+    val dotScale by transition.animateFloat(
+        initialValue = 0.9f,
+        targetValue = 1.15f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
+            animation = tween(800, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "bubble_scale"
+        label = "dot_pulse"
     )
 
     Box(
@@ -81,7 +92,8 @@ fun HomeScreen(viewModel: GameViewModel) {
                     listOf(
                         Color(0xFF0F172A),
                         Color(0xFF1E1B4B),
-                        Color(0xFF2E1065)
+                        Color(0xFF172554),
+                        Color(0xFF0F172A)
                     )
                 )
             )
@@ -90,11 +102,12 @@ fun HomeScreen(viewModel: GameViewModel) {
             .testTag("home_screen")
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // 1. Top Bar: Coins + Total Stars
+
+            // 1. TOP BAR: 3D Glossy Currency & Star Rating
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -103,32 +116,44 @@ fun HomeScreen(viewModel: GameViewModel) {
                     onClick = { viewModel.navigateTo(GameScreen.SHOP) }
                 )
 
-                Row(
+                // 3D Metallic Star Counter Pill
+                Box(
                     modifier = Modifier
-                        .shadow(4.dp, CircleShape)
-                        .clip(CircleShape)
-                        .background(Color(0xFF312E81).copy(alpha = 0.85f))
-                        .border(1.5.dp, Color(0xFFFBBF24), CircleShape)
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .shadow(6.dp, RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color(0xFF312E81), Color(0xFF1E1B4B))
+                            )
+                        )
+                        .border(
+                            2.dp,
+                            Brush.linearGradient(
+                                listOf(Color(0xFFFFE082), Color(0xFFFFA000), Color(0xFFFFD54F))
+                            ),
+                            RoundedCornerShape(20.dp)
+                        )
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = "Stars",
-                        tint = Color(0xFFFBBF24),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "${saveState.levelStars.values.sum()} Stars",
-                        color = Color(0xFFFDE68A),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Stars",
+                            tint = Color(0xFFFBBF24),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "${saveState.levelStars.values.sum()} Stars",
+                            color = Color(0xFFFEF3C7),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
                 }
             }
 
-            // 2. Main Scrollable Content Area
+            // 2. MAIN CENTER BODY (3D Kingdom Castle & Action Zone)
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -137,203 +162,146 @@ fun HomeScreen(viewModel: GameViewModel) {
                     .padding(horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Hero Castle Banner
+                // 3D Kingdom Master Card with Beveled Golden Rim
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
-                        .shadow(12.dp, RoundedCornerShape(28.dp))
-                        .clip(RoundedCornerShape(28.dp))
+                        .shadow(16.dp, RoundedCornerShape(32.dp))
+                        .clip(RoundedCornerShape(32.dp))
                         .background(
                             Brush.verticalGradient(
                                 listOf(
-                                    Color(0xFF4338CA),
-                                    Color(0xFF312E81),
-                                    Color(0xFF1E1B4B)
+                                    Color(0xFF3730A3),
+                                    Color(0xFF1E1B4B),
+                                    Color(0xFF0F172A)
                                 )
                             )
                         )
-                        .border(2.dp, Color(0xFF818CF8).copy(alpha = 0.5f), RoundedCornerShape(28.dp))
-                        .padding(vertical = 18.dp, horizontal = 20.dp),
+                        .border(
+                            3.dp,
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color(0xFFFFF59D),
+                                    Color(0xFFFFB300),
+                                    Color(0xFFD97706),
+                                    Color(0xFF78350F)
+                                )
+                            ),
+                            RoundedCornerShape(32.dp)
+                        )
+                        .padding(vertical = 22.dp, horizontal = 20.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        // Title with 3D Gold Accent
                         Text(
                             text = "👑 BUBBLE KINGDOM 👑",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Black,
                             color = Color(0xFFFDE047),
-                            letterSpacing = 1.sp
+                            letterSpacing = 1.2.sp
                         )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // 3D Glowing Glass Bubble with Pippa Mascot
+                        Box(
+                            modifier = Modifier
+                                .size(96.dp)
+                                .shadow(14.dp, CircleShape)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.radialGradient(
+                                        listOf(
+                                            Color(0xFFFEF9C3),
+                                            Color(0xFFFDE047),
+                                            Color(0xFFF59E0B)
+                                        )
+                                    )
+                                )
+                                .border(3.dp, Color(0xFFFFFBEB), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = "🐶", fontSize = 52.sp)
+                        }
 
                         Spacer(modifier = Modifier.height(10.dp))
 
+                        // Level Progress Badge
                         Box(
                             modifier = Modifier
-                                .size(86.dp)
-                                .shadow(8.dp, CircleShape)
-                                .clip(CircleShape)
-                                .background(Color(0xFFFDE68A)),
-                            contentAlignment = Alignment.Center
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color(0xFF1E1B4B).copy(alpha = 0.8f))
+                                .border(1.5.dp, Color(0xFF818CF8), RoundedCornerShape(14.dp))
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
                         ) {
-                            Text(text = "🐶", fontSize = 46.sp)
+                            Text(
+                                text = "Level ${saveState.unlockedLevel} / 100",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
-
                         Text(
-                            text = "Level ${saveState.unlockedLevel} / 100",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-
-                        Text(
-                            text = "🐾 ${saveState.rescuedPets.size} Pets Rescued",
+                            text = "🐾 ${saveState.rescuedPets.size} Pets Rescued  •  ⭐ 100 Worlds",
                             fontSize = 13.sp,
                             color = Color(0xFFC7D2FE),
-                            modifier = Modifier.padding(top = 2.dp)
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(top = 6.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(26.dp))
 
-                // Left Side Action Bubbles (Spin + Gift) + Big Play Button
+                // 3. ACTION ROW: Left Side 3D Icons (Wheel & Gift) + Big 3D Play Button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    // Left Column: Pure 3D Canvas Icons (NO EMOJIS, NO OUTER CIRCLES)
                     Column(
                         verticalArrangement = Arrangement.spacedBy(14.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        SideActionBubble(
-                            emoji = "🎡",
-                            label = "Wheel",
-                            gradient = listOf(Color(0xFFF59E0B), Color(0xFFD97706)),
+                        // 1. 3D Lucky Wheel Icon
+                        CanvasLuckyWheel(
                             hasNotification = freeSpinReady,
-                            notificationText = "FREE",
-                            scale = if (freeSpinReady) pulseScale else 1.0f,
-                            onClick = { viewModel.navigateTo(GameScreen.LUCKY_SPIN) },
-                            testTag = "side_bubble_spin"
+                            dotScale = dotScale,
+                            onClick = { viewModel.navigateTo(GameScreen.LUCKY_SPIN) }
                         )
 
-                        SideActionBubble(
-                            emoji = "🎁",
-                            label = "Gift",
-                            gradient = listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9)),
+                        // 2. 3D Daily Gift Box Icon
+                        CanvasDailyGift(
                             hasNotification = dailyGiftReady,
-                            notificationText = "NEW",
-                            scale = if (dailyGiftReady) pulseScale else 1.0f,
-                            onClick = { viewModel.navigateTo(GameScreen.DAILY_REWARDS) },
-                            testTag = "side_bubble_daily"
+                            dotScale = dotScale,
+                            onClick = { viewModel.navigateTo(GameScreen.DAILY_REWARDS) }
                         )
                     }
 
-                    GlossyButton(
-                        text = "PLAY LEVEL ${saveState.unlockedLevel}",
-                        icon = "▶",
+                    // Right: Massive 3D Glossy Arcade PLAY Button
+                    ThreeDPlayButton(
+                        levelNum = saveState.unlockedLevel,
                         onClick = { viewModel.startLevel(saveState.unlockedLevel) },
-                        colors = listOf(Color(0xFF10B981), Color(0xFF047857)),
                         modifier = Modifier
                             .weight(1f)
-                            .height(72.dp),
-                        testTag = "play_level_btn"
+                            .height(78.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Featured Royal Events Banner
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(10.dp, RoundedCornerShape(24.dp))
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(
-                                    Color(0xFFD946EF),
-                                    Color(0xFF9333EA),
-                                    Color(0xFF6B21A8)
-                                )
-                            )
-                        )
-                        .border(2.dp, Color(0xFFFDE047), RoundedCornerShape(24.dp))
-                        .clickable { viewModel.navigateTo(GameScreen.EVENTS) }
-                        .padding(18.dp)
-                        .testTag("home_events_banner")
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.25f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(text = "👑", fontSize = 28.sp)
-                            }
-
-                            Column {
-                                Text(
-                                    text = "ROYAL EVENTS • ইভেন্ট",
-                                    color = Color(0xFFFEF08A),
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.ExtraBold
-                                )
-                                Text(
-                                    text = "🐾 Pet Sanctuary • 🏆 Achievements",
-                                    color = Color.White.copy(alpha = 0.9f),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFFFDE047))
-                                .padding(horizontal = 14.dp, vertical = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "ENTER",
-                                    color = Color(0xFF1E1B4B),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.ExtraBold
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.ChevronRight,
-                                    contentDescription = null,
-                                    tint = Color(0xFF1E1B4B),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // 3. Modern Bottom Navigation Bar
-            HomeBottomNavBar(
-                onMapClick = { viewModel.navigateTo(GameScreen.WORLD_MAP) },
+            // 4. BOTTOM NAVIGATION BAR (Home, Levels, Events, Shop, Settings)
+            KingdomBottomNavBar(
+                currentScreen = GameScreen.HOME,
+                onHomeClick = { /* Already on Home */ },
+                onLevelsClick = { viewModel.navigateTo(GameScreen.WORLD_MAP) },
+                onEventsClick = { viewModel.navigateTo(GameScreen.EVENTS) },
                 onShopClick = { viewModel.navigateTo(GameScreen.SHOP) },
                 onSettingsClick = { viewModel.navigateTo(GameScreen.SETTINGS) }
             )
@@ -341,157 +309,449 @@ fun HomeScreen(viewModel: GameViewModel) {
     }
 }
 
+/**
+ * PURE 3D VECTOR LUCKY WHEEL (NO EMOJI, NO ENCLOSING BUBBLE)
+ */
 @Composable
-fun SideActionBubble(
-    emoji: String,
-    label: String,
-    gradient: List<Color>,
+fun CanvasLuckyWheel(
     hasNotification: Boolean,
-    notificationText: String,
-    scale: Float,
-    onClick: () -> Unit,
-    testTag: String
+    dotScale: Float,
+    onClick: () -> Unit
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Box(
         modifier = Modifier
-            .scale(scale)
-            .clickable { onClick() }
-            .testTag(testTag)
+            .size(68.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() },
+        contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .shadow(8.dp, CircleShape)
-                .clip(CircleShape)
-                .background(Brush.radialGradient(gradient))
-                .border(2.dp, Color.White, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = emoji, fontSize = 26.sp)
+        Canvas(modifier = Modifier.size(56.dp)) {
+            val center = Offset(size.width / 2f, size.height / 2f)
+            val radius = size.width / 2f
 
-            if (hasNotification) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(x = 4.dp, y = (-4).dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFEF4444))
-                        .border(1.5.dp, Color.White, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 4.dp, vertical = 1.dp)
-                ) {
-                    Text(
-                        text = notificationText,
-                        color = Color.White,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
+            // Bottom 3D Drop Shadow
+            drawCircle(
+                color = Color.Black.copy(alpha = 0.45f),
+                radius = radius,
+                center = Offset(center.x, center.y + 4f)
+            )
+
+            // Metallic Gold Outer Rim
+            drawCircle(
+                brush = Brush.sweepGradient(
+                    listOf(
+                        Color(0xFFFFE082),
+                        Color(0xFFFFA000),
+                        Color(0xFFFFD54F),
+                        Color(0xFFE65100),
+                        Color(0xFFFFE082)
+                    ),
+                    center = center
+                ),
+                radius = radius,
+                center = center
+            )
+
+            // Inner Wheel Slices (6 Vibrant Colors)
+            val innerR = radius - 4.5f
+            val slices = listOf(
+                Color(0xFFEF4444), // Red
+                Color(0xFF3B82F6), // Blue
+                Color(0xFF10B981), // Green
+                Color(0xFFF59E0B), // Orange-Yellow
+                Color(0xFF8B5CF6), // Purple
+                Color(0xFFEC4899)  // Pink
+            )
+            val sweep = 360f / slices.size
+            slices.forEachIndexed { i, c ->
+                drawArc(
+                    color = c,
+                    startAngle = i * sweep,
+                    sweepAngle = sweep,
+                    useCenter = true,
+                    topLeft = Offset(center.x - innerR, center.y - innerR),
+                    size = Size(innerR * 2, innerR * 2)
+                )
             }
+
+            // Inner Gold Hub
+            drawCircle(
+                brush = Brush.radialGradient(
+                    listOf(Color(0xFFFFF9C4), Color(0xFFF57F17)),
+                    center = center,
+                    radius = 9f
+                ),
+                radius = 9f,
+                center = center
+            )
+            drawCircle(color = Color.White, radius = 3.5f, center = center)
+
+            // Pointer on Top
+            val pointer = Path().apply {
+                moveTo(center.x, center.y - innerR + 1f)
+                lineTo(center.x - 5.5f, center.y - innerR - 6f)
+                lineTo(center.x + 5.5f, center.y - innerR - 6f)
+                close()
+            }
+            drawPath(pointer, Color(0xFFEF4444))
+            drawPath(pointer, Color.White, style = Stroke(width = 1.5f))
         }
 
-        Text(
-            text = label,
-            color = Color.White,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 4.dp)
-        )
+        // Distinct Red Alert Notification Dot (NO TEXT)
+        if (hasNotification) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-1).dp, y = 1.dp)
+                    .scale(dotScale)
+                    .size(15.dp)
+                    .shadow(8.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(Color(0xFFEF4444))
+                    .border(2.dp, Color.White, CircleShape)
+            )
+        }
     }
 }
 
+/**
+ * PURE 3D VECTOR DAILY GIFT BOX (NO EMOJI, NO ENCLOSING BUBBLE)
+ */
 @Composable
-fun HomeBottomNavBar(
-    onMapClick: () -> Unit,
+fun CanvasDailyGift(
+    hasNotification: Boolean,
+    dotScale: Float,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(68.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.size(54.dp)) {
+            val w = size.width
+            val h = size.height
+
+            // 3D Shadow
+            drawOval(
+                color = Color.Black.copy(alpha = 0.4f),
+                topLeft = Offset(4f, h - 8f),
+                size = Size(w - 8f, 8f)
+            )
+
+            // Gift Box Body (Ruby Red 3D Depth)
+            val boxTop = 18f
+            val boxH = h - 25f
+            val boxW = w - 10f
+            val boxLeft = 5f
+            drawRoundRect(
+                brush = Brush.verticalGradient(
+                    listOf(Color(0xFFF43F5E), Color(0xFFBE123C), Color(0xFF881337)),
+                    startY = boxTop,
+                    endY = boxTop + boxH
+                ),
+                topLeft = Offset(boxLeft, boxTop),
+                size = Size(boxW, boxH),
+                cornerRadius = CornerRadius(8f, 8f)
+            )
+
+            // Gift Box Lid
+            val lidTop = 12f
+            val lidH = 10f
+            val lidW = w - 4f
+            val lidLeft = 2f
+            drawRoundRect(
+                brush = Brush.verticalGradient(
+                    listOf(Color(0xFFFB7185), Color(0xFFE11D48)),
+                    startY = lidTop,
+                    endY = lidTop + lidH
+                ),
+                topLeft = Offset(lidLeft, lidTop),
+                size = Size(lidW, lidH),
+                cornerRadius = CornerRadius(6f, 6f)
+            )
+
+            // Vertical Metallic Gold Ribbon
+            val ribbonW = 9f
+            val ribbonX = (w - ribbonW) / 2f
+            drawRoundRect(
+                brush = Brush.verticalGradient(
+                    listOf(Color(0xFFFFF59D), Color(0xFFFFB300), Color(0xFFE65100))
+                ),
+                topLeft = Offset(ribbonX, lidTop),
+                size = Size(ribbonW, boxH + (boxTop - lidTop)),
+                cornerRadius = CornerRadius(2f, 2f)
+            )
+
+            // Horizontal Gold Ribbon
+            val hRibbonY = boxTop + (boxH - 7f) / 2f
+            drawRoundRect(
+                brush = Brush.horizontalGradient(
+                    listOf(Color(0xFFE65100), Color(0xFFFFF59D), Color(0xFFE65100))
+                ),
+                topLeft = Offset(boxLeft, hRibbonY),
+                size = Size(boxW, 7f),
+                cornerRadius = CornerRadius(2f, 2f)
+            )
+
+            // 3D Golden Bow on Top
+            val bowCenter = Offset(w / 2f, lidTop + 1f)
+            drawOval(
+                brush = Brush.radialGradient(
+                    listOf(Color(0xFFFFF59D), Color(0xFFFFB300)),
+                    center = Offset(bowCenter.x - 7f, bowCenter.y - 4f),
+                    radius = 9f
+                ),
+                topLeft = Offset(bowCenter.x - 14f, bowCenter.y - 9f),
+                size = Size(14f, 10f)
+            )
+            drawOval(
+                brush = Brush.radialGradient(
+                    listOf(Color(0xFFFFF59D), Color(0xFFFFB300)),
+                    center = Offset(bowCenter.x + 7f, bowCenter.y - 4f),
+                    radius = 9f
+                ),
+                topLeft = Offset(bowCenter.x, bowCenter.y - 9f),
+                size = Size(14f, 10f)
+            )
+            drawCircle(
+                brush = Brush.radialGradient(
+                    listOf(Color(0xFFFFFFFF), Color(0xFFFFC107)),
+                    center = bowCenter,
+                    radius = 4f
+                ),
+                radius = 4.5f,
+                center = bowCenter
+            )
+        }
+
+        // Distinct Red Alert Notification Dot (NO TEXT)
+        if (hasNotification) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-1).dp, y = 1.dp)
+                    .scale(dotScale)
+                    .size(15.dp)
+                    .shadow(8.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(Color(0xFFEF4444))
+                    .border(2.dp, Color.White, CircleShape)
+            )
+        }
+    }
+}
+
+/**
+ * 3D CANDY ARCADE PUSH BUTTON WITH REAL TACTILE DEPTH
+ */
+@Composable
+fun ThreeDPlayButton(
+    levelNum: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    Box(
+        modifier = modifier
+            .offset(y = if (isPressed) 4.dp else 0.dp)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) { onClick() }
+            .testTag("play_level_btn")
+    ) {
+        // 1. Darker 3D Bottom Bevel Layer
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(26.dp))
+                .background(Color(0xFF064E3B))
+        )
+
+        // 2. Top Pushable Bevel Surface
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(68.dp)
+                .shadow(if (isPressed) 2.dp else 8.dp, RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(24.dp))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xFF4ADE80),
+                            Color(0xFF16A34A),
+                            Color(0xFF15803D)
+                        )
+                    )
+                )
+                .border(2.dp, Color(0xFFBBF7D0).copy(alpha = 0.8f), RoundedCornerShape(24.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "PLAY LEVEL $levelNum",
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.sp
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 3D ROYAL BOTTOM NAVIGATION BAR (Home, Levels, Events, Shop, Settings)
+ */
+@Composable
+fun KingdomBottomNavBar(
+    currentScreen: GameScreen,
+    onHomeClick: () -> Unit,
+    onLevelsClick: () -> Unit,
+    onEventsClick: () -> Unit,
     onShopClick: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(16.dp)
-            .background(Color(0xFF1E1B4B).copy(alpha = 0.96f))
+            .shadow(20.dp)
+            .background(Color(0xFF111827).copy(alpha = 0.98f))
             .border(
-                width = 1.dp,
+                width = 2.dp,
                 brush = Brush.verticalGradient(
-                    listOf(Color(0xFF818CF8).copy(alpha = 0.5f), Color.Transparent)
+                    listOf(Color(0xFF818CF8).copy(alpha = 0.6f), Color.Transparent)
                 ),
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
             )
-            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-            .padding(horizontal = 24.dp, vertical = 10.dp)
+            .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
+            .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            BottomNavButton(
-                icon = Icons.Default.Map,
-                label = "World Map",
-                badgeColor = Color(0xFF3B82F6),
-                onClick = onMapClick,
-                testTag = "nav_world_map"
+            // 1. HOME BUTTON (Leftmost, Active 3D Golden Pill)
+            NavTabItem(
+                label = "Home",
+                icon = Icons.Default.Home,
+                isSelected = currentScreen == GameScreen.HOME,
+                badgeColor = Color(0xFFF59E0B),
+                onClick = onHomeClick
             )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                BottomNavButton(
-                    icon = Icons.Default.ShoppingBag,
-                    label = "Shop",
-                    badgeColor = Color(0xFF8B5CF6),
-                    onClick = onShopClick,
-                    testTag = "nav_booster_shop"
-                )
+            // 2. LEVELS BUTTON (World Map)
+            NavTabItem(
+                label = "Levels",
+                icon = Icons.Default.Map,
+                isSelected = currentScreen == GameScreen.WORLD_MAP,
+                badgeColor = Color(0xFF3B82F6),
+                onClick = onLevelsClick
+            )
 
-                BottomNavButton(
-                    icon = Icons.Default.Settings,
-                    label = "Settings",
-                    badgeColor = Color(0xFF64748B),
-                    onClick = onSettingsClick,
-                    testTag = "nav_settings"
-                )
-            }
+            // 3. EVENTS BUTTON (Beside Levels)
+            NavTabItem(
+                label = "Events",
+                icon = Icons.Default.EmojiEvents,
+                isSelected = currentScreen == GameScreen.EVENTS,
+                badgeColor = Color(0xFFEC4899),
+                onClick = onEventsClick
+            )
+
+            // 4. BOOSTER SHOP BUTTON
+            NavTabItem(
+                label = "Shop",
+                icon = Icons.Default.ShoppingBag,
+                isSelected = currentScreen == GameScreen.SHOP,
+                badgeColor = Color(0xFF8B5CF6),
+                onClick = onShopClick
+            )
+
+            // 5. SETTINGS BUTTON
+            NavTabItem(
+                label = "Settings",
+                icon = Icons.Default.Settings,
+                isSelected = currentScreen == GameScreen.SETTINGS,
+                badgeColor = Color(0xFF64748B),
+                onClick = onSettingsClick
+            )
         }
     }
 }
 
 @Composable
-fun BottomNavButton(
-    icon: ImageVector,
+fun NavTabItem(
     label: String,
+    icon: ImageVector,
+    isSelected: Boolean,
     badgeColor: Color,
-    onClick: () -> Unit,
-    testTag: String
+    onClick: () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() }
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-            .testTag(testTag)
+            .padding(horizontal = 6.dp, vertical = 4.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(44.dp)
+                .size(46.dp)
+                .shadow(if (isSelected) 8.dp else 2.dp, CircleShape)
                 .clip(CircleShape)
-                .background(badgeColor.copy(alpha = 0.25f))
-                .border(1.5.dp, badgeColor, CircleShape),
+                .background(
+                    if (isSelected) {
+                        Brush.radialGradient(
+                            listOf(Color(0xFFFDE047), Color(0xFFD97706))
+                        )
+                    } else {
+                        Brush.radialGradient(
+                            listOf(badgeColor.copy(alpha = 0.35f), Color(0xFF1E293B))
+                        )
+                    }
+                )
+                .border(
+                    width = if (isSelected) 2.dp else 1.dp,
+                    color = if (isSelected) Color.White else badgeColor.copy(alpha = 0.5f),
+                    shape = CircleShape
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = Color.White,
+                tint = if (isSelected) Color(0xFF1E1B4B) else Color.White,
                 modifier = Modifier.size(24.dp)
             )
         }
+
+        Spacer(modifier = Modifier.height(3.dp))
+
         Text(
             text = label,
-            color = Color.White.copy(alpha = 0.9f),
+            color = if (isSelected) Color(0xFFFDE047) else Color.White.copy(alpha = 0.8f),
             fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(top = 4.dp)
+            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium
         )
     }
 }

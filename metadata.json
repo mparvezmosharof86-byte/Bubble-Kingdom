@@ -1,0 +1,6 @@
+{
+  "name": "Bubble Kingdom",
+  "description": "A premium fantasy bubble shooter game with pet rescue, glossy bubbles, combos, boosters, and 100+ exciting puzzle levels.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

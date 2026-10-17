@@ -51,6 +51,9 @@ jobs:
           sed -i 's/targetSdk = 36/targetSdk = 35/g' app/build.gradle.kts || true
           sed -i '/foojay-resolver-convention/d' settings.gradle.kts || true
 
+          # Fix core-ktx to 1.15.0 to match compileSdk 35
+          sed -i 's/coreKtx = .*/coreKtx = "1.15.0"/g' gradle/libs.versions.toml || true
+
       - name: Build Debug APK with Gradle
         run: |
           cd "$PROJECT_DIR"

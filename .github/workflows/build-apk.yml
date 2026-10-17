@@ -29,10 +29,15 @@ jobs:
         run: |
           touch .env
           touch .env.example
-          # Generate debug.keystore if missing
+          # Generate debug.keystore
           keytool -genkeypair -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
-          # Safe fallback for AI Studio debugConfig
-          sed -i 's/signingConfig = signingConfigs.getByName("debugConfig")/\/\/ signingConfig removed for CI/g' app/build.gradle.kts || true
+          # Safe fallback for debugConfig
+          sed -i 's/signingConfig = signingConfigs.getByName("debugConfig")/\/\/ removed for CI/g' app/build.gradle.kts || true
+          # Use pre-installed stable Android SDK 35 instead of uninstalled SDK 36 preview
+          sed -i 's/compileSdk {.*}/compileSdk = 35/g' app/build.gradle.kts || true
+          sed -i 's/targetSdk = 36/targetSdk = 35/g' app/build.gradle.kts || true
+          # Remove foojay resolver
+          sed -i '/foojay-resolver-convention/d' settings.gradle.kts || true
 
       - name: Build Debug APK with Gradle
         run: gradle assembleDebug --no-daemon --no-configuration-cache --stacktrace

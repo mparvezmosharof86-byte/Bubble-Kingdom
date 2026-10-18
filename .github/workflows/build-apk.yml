@@ -57,6 +57,41 @@ jobs:
           # Fix core-ktx to 1.15.0 to match compileSdk 35
           sed -i 's/coreKtx = .*/coreKtx = "1.15.0"/g' gradle/libs.versions.toml || true
 
+      - name: Generate App Launcher Icons from app_icon.png
+        run: |
+          ICON_FILE=$(find . -iname "*app_icon*.png" -o -iname "*icon*.png" | head -n 1)
+          if [ -n "$ICON_FILE" ]; then
+            echo "Found custom app icon: $ICON_FILE"
+            python3 -c "
+          from PIL import Image
+          import os, shutil
+
+          img = Image.open('$ICON_FILE').convert('RGBA')
+          sizes = {
+              'mipmap-mdpi': 48,
+              'mipmap-hdpi': 72,
+              'mipmap-xhdpi': 96,
+              'mipmap-xxhdpi': 144,
+              'mipmap-xxxhdpi': 192
+          }
+          res_base = os.path.join('$PROJECT_DIR', 'app', 'src', 'main', 'res')
+          for folder, sz in sizes.items():
+              target_dir = os.path.join(res_base, folder)
+              os.makedirs(target_dir, exist_ok=True)
+              r = img.resize((sz, sz), Image.Resampling.LANCZOS)
+              r.save(os.path.join(target_dir, 'ic_launcher.png'))
+              r.save(os.path.join(target_dir, 'ic_launcher_round.png'))
+
+          # Remove legacy XML template so custom 3D PNG displays everywhere
+          anydpi_dir = os.path.join(res_base, 'mipmap-anydpi-v26')
+          if os.path.exists(anydpi_dir):
+              shutil.rmtree(anydpi_dir)
+          print('3D App Icons generated successfully for all Android densities!')
+          "
+          else
+            echo "No custom icon found, skipping."
+          fi
+
       - name: Build Debug APK with Gradle
         run: |
           cd "$PROJECT_DIR"
@@ -72,7 +107,7 @@ jobs:
         with:
           tag_name: latest-build
           name: "Bubble Kingdom Direct APK"
-          body: "Direct APK file ready to install on Android without unzipping!"
+          body: "Direct APK file ready to install on Android with custom 3D app icon!"
           files: release_apk/Bubble-Kingdom.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

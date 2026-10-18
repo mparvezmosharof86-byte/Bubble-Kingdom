@@ -25,10 +25,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
@@ -92,13 +90,17 @@ fun HomeScreen(viewModel: GameViewModel) {
             .statusBarsPadding()
             .testTag("home_screen")
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 12.dp)
+        ) {
 
             // 1. TOP BAR
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -143,24 +145,23 @@ fun HomeScreen(viewModel: GameViewModel) {
                 }
             }
 
-            // 2. MAIN BODY
+            // 2. MAIN CENTER AREA (কমপ্যাক্ট ক্যাসল ও সেন্ট্রালাইজড বাটন)
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Spacer(modifier = Modifier.height(4.dp))
 
-                // Kingdom 3D Card
+                // Kingdom Card: ছোট, স্লিম এবং ওপরে উঠানো
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(16.dp, RoundedCornerShape(32.dp))
-                        .clip(RoundedCornerShape(32.dp))
+                        .fillMaxWidth(0.94f)
+                        .padding(top = 2.dp)
+                        .shadow(12.dp, RoundedCornerShape(26.dp))
+                        .clip(RoundedCornerShape(26.dp))
                         .background(
                             Brush.verticalGradient(
                                 listOf(
@@ -171,7 +172,7 @@ fun HomeScreen(viewModel: GameViewModel) {
                             )
                         )
                         .border(
-                            3.dp,
+                            2.5.dp,
                             Brush.verticalGradient(
                                 listOf(
                                     Color(0xFFFFF59D),
@@ -180,26 +181,27 @@ fun HomeScreen(viewModel: GameViewModel) {
                                     Color(0xFF78350F)
                                 )
                             ),
-                            RoundedCornerShape(32.dp)
+                            RoundedCornerShape(26.dp)
                         )
-                        .padding(vertical = 20.dp, horizontal = 20.dp),
+                        .padding(vertical = 12.dp, horizontal = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "👑 BUBBLE KINGDOM 👑",
-                            fontSize = 24.sp,
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.Black,
                             color = Color(0xFFFDE047),
-                            letterSpacing = 1.2.sp
+                            letterSpacing = 1.sp
                         )
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
+                        // কমপ্যাক্ট ৩ডি মাসকট
                         Box(
                             modifier = Modifier
-                                .size(96.dp)
-                                .shadow(14.dp, CircleShape)
+                                .size(74.dp)
+                                .shadow(10.dp, CircleShape)
                                 .clip(CircleShape)
                                 .background(
                                     Brush.radialGradient(
@@ -210,24 +212,24 @@ fun HomeScreen(viewModel: GameViewModel) {
                                         )
                                     )
                                 )
-                                .border(3.dp, Color(0xFFFFFBEB), CircleShape),
+                                .border(2.5.dp, Color(0xFFFFFBEB), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = "🐶", fontSize = 52.sp)
+                            Text(text = "🐶", fontSize = 42.sp)
                         }
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(14.dp))
+                                .clip(RoundedCornerShape(12.dp))
                                 .background(Color(0xFF1E1B4B).copy(alpha = 0.8f))
-                                .border(1.5.dp, Color(0xFF818CF8), RoundedCornerShape(14.dp))
-                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                                .border(1.2.dp, Color(0xFF818CF8), RoundedCornerShape(12.dp))
+                                .padding(horizontal = 14.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 text = "Level ${saveState.unlockedLevel} / 100",
-                                fontSize = 17.sp,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
@@ -235,26 +237,25 @@ fun HomeScreen(viewModel: GameViewModel) {
 
                         Text(
                             text = "🐾 ${saveState.rescuedPets.size} Pets Rescued  •  ⭐ 100 Worlds",
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             color = Color(0xFFC7D2FE),
                             fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(top = 6.dp)
+                            modifier = Modifier.padding(top = 4.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(36.dp))
-
-                // Left 3D Icons & Lowered Play Button
-                Row(
+                // 3. বামপাশে স্পিন ও গিফট আইকন (সেম অবস্থান)
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        .padding(top = 10.dp)
                 ) {
                     Column(
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         CanvasLuckyWheel(
@@ -269,17 +270,23 @@ fun HomeScreen(viewModel: GameViewModel) {
                             onClick = { viewModel.navigateTo(GameScreen.DAILY_REWARDS) }
                         )
                     }
+                }
 
+                // 4. PLAY LEVEL বাটন: একদম নিচে মাঝ বরাবর (Center Aligned)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     ThreeDPlayButton(
                         levelNum = saveState.unlockedLevel,
                         onClick = { viewModel.startLevel(saveState.unlockedLevel) },
                         modifier = Modifier
-                            .weight(1f)
-                            .height(82.dp)
+                            .fillMaxWidth(0.88f)
+                            .height(72.dp)
                     )
                 }
-
-                Spacer(modifier = Modifier.height(10.dp))
             }
         }
     }
@@ -293,14 +300,14 @@ fun CanvasLuckyWheel(
 ) {
     Box(
         modifier = Modifier
-            .size(68.dp)
+            .size(64.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.size(56.dp)) {
+        Canvas(modifier = Modifier.size(54.dp)) {
             val center = Offset(size.width / 2f, size.height / 2f)
             val radius = size.width / 2f
 
@@ -350,17 +357,17 @@ fun CanvasLuckyWheel(
                 brush = Brush.radialGradient(
                     listOf(Color(0xFFFFF9C4), Color(0xFFF57F17)),
                     center = center,
-                    radius = 9f
+                    radius = 8f
                 ),
-                radius = 9f,
+                radius = 8f,
                 center = center
             )
-            drawCircle(color = Color.White, radius = 3.5f, center = center)
+            drawCircle(color = Color.White, radius = 3f, center = center)
 
             val pointer = Path().apply {
                 moveTo(center.x, center.y - innerR + 1f)
-                lineTo(center.x - 5.5f, center.y - innerR - 6f)
-                lineTo(center.x + 5.5f, center.y - innerR - 6f)
+                lineTo(center.x - 5f, center.y - innerR - 5f)
+                lineTo(center.x + 5f, center.y - innerR - 5f)
                 close()
             }
             drawPath(pointer, Color(0xFFEF4444))
@@ -391,14 +398,14 @@ fun CanvasDailyGift(
 ) {
     Box(
         modifier = Modifier
-            .size(68.dp)
+            .size(64.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.size(54.dp)) {
+        Canvas(modifier = Modifier.size(52.dp)) {
             val w = size.width
             val h = size.height
 
@@ -523,6 +530,7 @@ fun ThreeDPlayButton(
             ) { onClick() }
             .testTag("play_level_btn")
     ) {
+        // 3D Bottom Bevel Lip
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -530,11 +538,12 @@ fun ThreeDPlayButton(
                 .background(Color(0xFF064E3B))
         )
 
+        // Top 3D Pressable Surface
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(72.dp)
-                .shadow(if (isPressed) 2.dp else 8.dp, RoundedCornerShape(24.dp))
+                .height(66.dp)
+                .shadow(if (isPressed) 2.dp else 10.dp, RoundedCornerShape(24.dp))
                 .clip(RoundedCornerShape(24.dp))
                 .background(
                     Brush.verticalGradient(
@@ -545,7 +554,7 @@ fun ThreeDPlayButton(
                         )
                     )
                 )
-                .border(2.dp, Color(0xFFBBF7D0).copy(alpha = 0.8f), RoundedCornerShape(24.dp)),
+                .border(2.dp, Color(0xFFBBF7D0).copy(alpha = 0.85f), RoundedCornerShape(24.dp)),
             contentAlignment = Alignment.Center
         ) {
             Row(
@@ -564,7 +573,7 @@ fun ThreeDPlayButton(
                     color = Color.White,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp
+                    letterSpacing = 1.2.sp
                 )
             }
         }

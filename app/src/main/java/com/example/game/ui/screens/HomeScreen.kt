@@ -72,7 +72,7 @@ fun HomeScreen(viewModel: GameViewModel) {
     val todayEpoch = System.currentTimeMillis() / (1000 * 60 * 60 * 24)
     val dailyGiftReady = todayEpoch > saveState.lastDailyClaimDay
 
-    // Pulsing glow for notification alert dot
+    // Pulsing alert animation for red notification dots
     val transition = rememberInfiniteTransition(label = "pulse_anim")
     val dotScale by transition.animateFloat(
         initialValue = 0.9f,
@@ -195,7 +195,6 @@ fun HomeScreen(viewModel: GameViewModel) {
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        // Title with 3D Gold Accent
                         Text(
                             text = "👑 BUBBLE KINGDOM 👑",
                             fontSize = 24.sp,
@@ -206,7 +205,7 @@ fun HomeScreen(viewModel: GameViewModel) {
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // 3D Glowing Glass Bubble with Pippa Mascot
+                        // 3D Mascot Sphere
                         Box(
                             modifier = Modifier
                                 .size(96.dp)
@@ -263,19 +262,17 @@ fun HomeScreen(viewModel: GameViewModel) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Left Column: Pure 3D Canvas Icons (NO EMOJIS, NO OUTER CIRCLES)
+                    // Left Column: Pure 3D Canvas Icons (NO EMOJI, NO ENCLOSING BUBBLES)
                     Column(
                         verticalArrangement = Arrangement.spacedBy(14.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // 1. 3D Lucky Wheel Icon
                         CanvasLuckyWheel(
                             hasNotification = freeSpinReady,
                             dotScale = dotScale,
                             onClick = { viewModel.navigateTo(GameScreen.LUCKY_SPIN) }
                         )
 
-                        // 2. 3D Daily Gift Box Icon
                         CanvasDailyGift(
                             hasNotification = dailyGiftReady,
                             dotScale = dotScale,
@@ -296,7 +293,7 @@ fun HomeScreen(viewModel: GameViewModel) {
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // 4. BOTTOM NAVIGATION BAR (Home, Levels, Events, Shop, Settings)
+            // 4. BOTTOM NAVIGATION BAR: Levels | Events | [ 🏠 HOME (BIG GOLDEN) ] | Shop | Settings
             KingdomBottomNavBar(
                 currentScreen = GameScreen.HOME,
                 onHomeClick = { /* Already on Home */ },
@@ -310,7 +307,7 @@ fun HomeScreen(viewModel: GameViewModel) {
 }
 
 /**
- * PURE 3D VECTOR LUCKY WHEEL (NO EMOJI, NO ENCLOSING BUBBLE)
+ * PURE 3D VECTOR LUCKY WHEEL
  */
 @Composable
 fun CanvasLuckyWheel(
@@ -331,14 +328,12 @@ fun CanvasLuckyWheel(
             val center = Offset(size.width / 2f, size.height / 2f)
             val radius = size.width / 2f
 
-            // Bottom 3D Drop Shadow
             drawCircle(
                 color = Color.Black.copy(alpha = 0.45f),
                 radius = radius,
                 center = Offset(center.x, center.y + 4f)
             )
 
-            // Metallic Gold Outer Rim
             drawCircle(
                 brush = Brush.sweepGradient(
                     listOf(
@@ -354,15 +349,14 @@ fun CanvasLuckyWheel(
                 center = center
             )
 
-            // Inner Wheel Slices (6 Vibrant Colors)
             val innerR = radius - 4.5f
             val slices = listOf(
-                Color(0xFFEF4444), // Red
-                Color(0xFF3B82F6), // Blue
-                Color(0xFF10B981), // Green
-                Color(0xFFF59E0B), // Orange-Yellow
-                Color(0xFF8B5CF6), // Purple
-                Color(0xFFEC4899)  // Pink
+                Color(0xFFEF4444),
+                Color(0xFF3B82F6),
+                Color(0xFF10B981),
+                Color(0xFFF59E0B),
+                Color(0xFF8B5CF6),
+                Color(0xFFEC4899)
             )
             val sweep = 360f / slices.size
             slices.forEachIndexed { i, c ->
@@ -376,7 +370,6 @@ fun CanvasLuckyWheel(
                 )
             }
 
-            // Inner Gold Hub
             drawCircle(
                 brush = Brush.radialGradient(
                     listOf(Color(0xFFFFF9C4), Color(0xFFF57F17)),
@@ -388,7 +381,6 @@ fun CanvasLuckyWheel(
             )
             drawCircle(color = Color.White, radius = 3.5f, center = center)
 
-            // Pointer on Top
             val pointer = Path().apply {
                 moveTo(center.x, center.y - innerR + 1f)
                 lineTo(center.x - 5.5f, center.y - innerR - 6f)
@@ -399,7 +391,6 @@ fun CanvasLuckyWheel(
             drawPath(pointer, Color.White, style = Stroke(width = 1.5f))
         }
 
-        // Distinct Red Alert Notification Dot (NO TEXT)
         if (hasNotification) {
             Box(
                 modifier = Modifier
@@ -417,7 +408,7 @@ fun CanvasLuckyWheel(
 }
 
 /**
- * PURE 3D VECTOR DAILY GIFT BOX (NO EMOJI, NO ENCLOSING BUBBLE)
+ * PURE 3D VECTOR DAILY GIFT BOX
  */
 @Composable
 fun CanvasDailyGift(
@@ -438,14 +429,12 @@ fun CanvasDailyGift(
             val w = size.width
             val h = size.height
 
-            // 3D Shadow
             drawOval(
                 color = Color.Black.copy(alpha = 0.4f),
                 topLeft = Offset(4f, h - 8f),
                 size = Size(w - 8f, 8f)
             )
 
-            // Gift Box Body (Ruby Red 3D Depth)
             val boxTop = 18f
             val boxH = h - 25f
             val boxW = w - 10f
@@ -461,7 +450,6 @@ fun CanvasDailyGift(
                 cornerRadius = CornerRadius(8f, 8f)
             )
 
-            // Gift Box Lid
             val lidTop = 12f
             val lidH = 10f
             val lidW = w - 4f
@@ -477,7 +465,6 @@ fun CanvasDailyGift(
                 cornerRadius = CornerRadius(6f, 6f)
             )
 
-            // Vertical Metallic Gold Ribbon
             val ribbonW = 9f
             val ribbonX = (w - ribbonW) / 2f
             drawRoundRect(
@@ -489,7 +476,6 @@ fun CanvasDailyGift(
                 cornerRadius = CornerRadius(2f, 2f)
             )
 
-            // Horizontal Gold Ribbon
             val hRibbonY = boxTop + (boxH - 7f) / 2f
             drawRoundRect(
                 brush = Brush.horizontalGradient(
@@ -500,7 +486,6 @@ fun CanvasDailyGift(
                 cornerRadius = CornerRadius(2f, 2f)
             )
 
-            // 3D Golden Bow on Top
             val bowCenter = Offset(w / 2f, lidTop + 1f)
             drawOval(
                 brush = Brush.radialGradient(
@@ -531,7 +516,6 @@ fun CanvasDailyGift(
             )
         }
 
-        // Distinct Red Alert Notification Dot (NO TEXT)
         if (hasNotification) {
             Box(
                 modifier = Modifier
@@ -549,7 +533,7 @@ fun CanvasDailyGift(
 }
 
 /**
- * 3D CANDY ARCADE PUSH BUTTON WITH REAL TACTILE DEPTH
+ * 3D CANDY ARCADE PUSH BUTTON
  */
 @Composable
 fun ThreeDPlayButton(
@@ -569,7 +553,6 @@ fun ThreeDPlayButton(
             ) { onClick() }
             .testTag("play_level_btn")
     ) {
-        // 1. Darker 3D Bottom Bevel Layer
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -577,7 +560,6 @@ fun ThreeDPlayButton(
                 .background(Color(0xFF064E3B))
         )
 
-        // 2. Top Pushable Bevel Surface
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -620,7 +602,7 @@ fun ThreeDPlayButton(
 }
 
 /**
- * 3D ROYAL BOTTOM NAVIGATION BAR (Home, Levels, Events, Shop, Settings)
+ * 3D BOTTOM NAVIGATION BAR: Levels | Events | [ 🏠 HOME (BIG GOLDEN CENTER) ] | Shop | Settings
  */
 @Composable
 fun KingdomBottomNavBar(
@@ -634,8 +616,8 @@ fun KingdomBottomNavBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(20.dp)
-            .background(Color(0xFF111827).copy(alpha = 0.98f))
+            .shadow(24.dp)
+            .background(Color(0xFF0B0F19).copy(alpha = 0.98f))
             .border(
                 width = 2.dp,
                 brush = Brush.verticalGradient(
@@ -644,23 +626,14 @@ fun KingdomBottomNavBar(
                 shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
             )
             .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
-            .padding(horizontal = 14.dp, vertical = 8.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. HOME BUTTON (Leftmost, Active 3D Golden Pill)
-            NavTabItem(
-                label = "Home",
-                icon = Icons.Default.Home,
-                isSelected = currentScreen == GameScreen.HOME,
-                badgeColor = Color(0xFFF59E0B),
-                onClick = onHomeClick
-            )
-
-            // 2. LEVELS BUTTON (World Map)
+            // 1. LEVELS (World Map)
             NavTabItem(
                 label = "Levels",
                 icon = Icons.Default.Map,
@@ -669,7 +642,7 @@ fun KingdomBottomNavBar(
                 onClick = onLevelsClick
             )
 
-            // 3. EVENTS BUTTON (Beside Levels)
+            // 2. EVENTS (Right beside Levels)
             NavTabItem(
                 label = "Events",
                 icon = Icons.Default.EmojiEvents,
@@ -678,7 +651,13 @@ fun KingdomBottomNavBar(
                 onClick = onEventsClick
             )
 
-            // 4. BOOSTER SHOP BUTTON
+            // 3. HOME BUTTON IN THE MIDDLE (BIGGER, ELEVATED & 3D GOLDEN)
+            CenterGoldenHomeButton(
+                isSelected = currentScreen == GameScreen.HOME,
+                onClick = onHomeClick
+            )
+
+            // 4. BOOSTER SHOP
             NavTabItem(
                 label = "Shop",
                 icon = Icons.Default.ShoppingBag,
@@ -687,7 +666,7 @@ fun KingdomBottomNavBar(
                 onClick = onShopClick
             )
 
-            // 5. SETTINGS BUTTON
+            // 5. SETTINGS
             NavTabItem(
                 label = "Settings",
                 icon = Icons.Default.Settings,
@@ -696,6 +675,69 @@ fun KingdomBottomNavBar(
                 onClick = onSettingsClick
             )
         }
+    }
+}
+
+/**
+ * ELEVATED 3D GOLDEN CENTER HOME BUTTON
+ */
+@Composable
+fun CenterGoldenHomeButton(
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .offset(y = (-14).dp) // Elevated 3D Floating Look above bottom bar!
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) { onClick() }
+    ) {
+        Box(
+            modifier = Modifier
+                .size(62.dp)
+                .shadow(14.dp, CircleShape)
+                .clip(CircleShape)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xFFFFF9C4), // Bright highlight
+                            Color(0xFFFDE047),
+                            Color(0xFFF59E0B),
+                            Color(0xFFB45309)  // Deep 3D gold shadow
+                        )
+                    )
+                )
+                .border(
+                    width = 2.5.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(Color(0xFFFFFFFF), Color(0xFFFFD54F), Color(0xFF78350F))
+                    ),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Home,
+                contentDescription = "Home",
+                tint = Color(0xFF1E1B4B), // Bold deep royal navy contrast
+                modifier = Modifier.size(32.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        Text(
+            text = "Home",
+            color = Color(0xFFFDE047),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Black
+        )
     }
 }
 
@@ -710,14 +752,14 @@ fun NavTabItem(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(14.dp))
             .clickable { onClick() }
-            .padding(horizontal = 6.dp, vertical = 4.dp)
+            .padding(horizontal = 4.dp, vertical = 4.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(46.dp)
-                .shadow(if (isSelected) 8.dp else 2.dp, CircleShape)
+                .size(42.dp)
+                .shadow(if (isSelected) 6.dp else 2.dp, CircleShape)
                 .clip(CircleShape)
                 .background(
                     if (isSelected) {
@@ -741,7 +783,7 @@ fun NavTabItem(
                 imageVector = icon,
                 contentDescription = label,
                 tint = if (isSelected) Color(0xFF1E1B4B) else Color.White,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(22.dp)
             )
         }
 

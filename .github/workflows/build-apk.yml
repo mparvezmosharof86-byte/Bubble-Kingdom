@@ -1,4 +1,4 @@
-name: Build Bubble Kingdom APK
+name: Build Play Store Release AAB
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Build Release AAB & Keystore
     runs-on: ubuntu-latest
 
     steps:
@@ -45,19 +45,17 @@ jobs:
           touch .env
           touch .env.example
 
-          # Generate debug.keystore
-          keytool -genkeypair -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+          # Generate Permanent Release Keystore for Play Store (.jks)
+          echo "Generating Nova Studio 24 Release Keystore..."
+          keytool -genkeypair -v -keystore my-upload-key.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000 -storepass nova24secret -keypass nova24secret -dname "CN=Nova Studio 24,O=Nova Studio,C=BD"
 
           # Fix configs for CI build
-          sed -i 's/signingConfig = signingConfigs.getByName("debugConfig")/\/\/ removed for CI/g' app/build.gradle.kts || true
           sed -i 's/compileSdk {.*}/compileSdk = 35/g' app/build.gradle.kts || true
           sed -i 's/targetSdk = 36/targetSdk = 35/g' app/build.gradle.kts || true
           sed -i '/foojay-resolver-convention/d' settings.gradle.kts || true
-
-          # Fix core-ktx to 1.15.0 to match compileSdk 35
           sed -i 's/coreKtx = .*/coreKtx = "1.15.0"/g' gradle/libs.versions.toml || true
 
-      - name: Generate App Launcher Icons from app_icon.png
+      - name: Generate App Launcher Icons
         run: |
           ICON_FILE=$(find . -iname "*app_icon*.png" -o -iname "*icon*.png" | head -n 1)
           if [ -n "$ICON_FILE" ]; then
@@ -93,33 +91,44 @@ jobs:
                       ImageIO.write(resized, "png", new File(dir, "ic_launcher.png"));
                       ImageIO.write(resized, "png", new File(dir, "ic_launcher_round.png"));
                   }
-                  System.out.println("3D App Icons generated successfully for all Android densities!");
+                  System.out.println("3D App Icons generated successfully!");
               }
           }
           EOF
             java Resize.java "$ICON_FILE" "$PROJECT_DIR/app/src/main/res"
             rm -f Resize.java
             rm -rf "$PROJECT_DIR/app/src/main/res/mipmap-anydpi-v26"
-          else
-            echo "No custom icon found, skipping."
           fi
 
-      - name: Build Debug APK with Gradle
+      - name: Build Signed Release AAB with Gradle
         run: |
           cd "$PROJECT_DIR"
-          gradle assembleDebug --no-daemon --no-configuration-cache --stacktrace
+          export STORE_PASSWORD=nova24secret
+          export KEY_PASSWORD=nova24secret
+          gradle bundleRelease --no-daemon --no-configuration-cache --stacktrace
 
-      - name: Prepare Direct APK
+      - name: Prepare Release Artifacts (.aab & .jks)
         run: |
-          mkdir -p release_apk
-          find . -name "*.apk" -exec cp {} release_apk/Bubble-Kingdom.apk \;
+          mkdir -p release_bundle
+          find . -name "*.aab" -exec cp {} release_bundle/Bubble-Kingdom-Release.aab \;
+          find . -name "my-upload-key.jks" -exec cp {} release_bundle/my-upload-key.jks \;
 
-      - name: Create Direct APK Release (No Zip Needed!)
+      - name: Publish Release to GitHub
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest-build
-          name: "Bubble Kingdom Direct APK"
-          body: "Direct APK file ready to install on Android with custom 3D app icon!"
-          files: release_apk/Bubble-Kingdom.apk
+          tag_name: play-store-release-v1
+          name: "Bubble Kingdom - Play Store Release AAB"
+          body: |
+            ### 👑 Bubble Kingdom Official Release AAB & Keystore
+            - **Package Name:** `com.novastudio24.bubblekingdom`
+            - **Studio:** Nova Studio 24
+            - **Keystore Password:** `nova24secret`
+            - **Key Alias:** `upload`
+            
+            Upload `Bubble-Kingdom-Release.aab` directly to Google Play Console!
+            *Keep your `my-upload-key.jks` safe for future game updates.*
+          files: |
+            release_bundle/Bubble-Kingdom-Release.aab
+            release_bundle/my-upload-key.jks
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

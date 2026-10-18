@@ -9,8 +9,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -30,8 +28,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,7 +35,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,23 +53,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.game.levels.LevelObjective
 import com.example.game.model.BoosterType
-import com.example.game.model.BubbleColor
-import com.example.game.model.BubbleType
 import com.example.game.ui.BubbleRenderer
 import com.example.game.ui.components.GlossyButton
 import com.example.game.ui.components.StarRatingBar
 import com.example.game.viewmodel.GameScreen
 import com.example.game.viewmodel.GameViewModel
 import com.example.game.viewmodel.PlayState
-import kotlin.math.cos
-import kotlin.math.sin
 
 @Composable
 fun GameplayScreen(viewModel: GameViewModel) {
     val state by viewModel.gameplayState.collectAsState()
     val saveState by viewModel.saveState.collectAsState()
 
-    // Virtual game canvas reference dimensions
     val virtualWidth = 720f
     val virtualHeight = 1280f
     val bubbleRadius = 45f
@@ -98,12 +88,6 @@ fun GameplayScreen(viewModel: GameViewModel) {
             .navigationBarsPadding()
             .testTag("gameplay_screen")
     ) {
-        val screenW = constraints.maxWidth.toFloat()
-        val screenH = constraints.maxHeight.toFloat()
-        val scaleX = screenW / virtualWidth
-        val scaleY = screenH / virtualHeight
-        val scale = minOf(scaleX, scaleY)
-
         Column(modifier = Modifier.fillMaxSize()) {
             // 1. Top HUD
             TopGameHud(
@@ -129,7 +113,6 @@ fun GameplayScreen(viewModel: GameViewModel) {
                 val sX = canvasW / virtualWidth
                 val sY = canvasH / virtualHeight
 
-                // Read animation tick to ensure smooth 60fps canvas redraw during projectile and particle physics
                 @Suppress("UNUSED_VARIABLE")
                 val animTick = state.animationTick
 
@@ -158,7 +141,6 @@ fun GameplayScreen(viewModel: GameViewModel) {
                                     val event = awaitPointerEvent()
                                     val change = event.changes.firstOrNull { it.id == pointerId } ?: break
                                     if (!change.pressed) {
-                                        // Pointer released: fire shot if aiming!
                                         if (isAiming) {
                                             viewModel.onAimRelease(shooterX, shooterY)
                                         }
@@ -186,188 +168,174 @@ fun GameplayScreen(viewModel: GameViewModel) {
                         }
                 ) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
+                        val dangerY = (bubbleRadius + 14 * bubbleRadius * 1.732f) * sY
+                        drawLine(
+                            color = Color(0xFFEF4444).copy(alpha = 0.45f),
+                            start = Offset(0f, dangerY),
+                            end = Offset(canvasW, dangerY),
+                            strokeWidth = 3f,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 15f), 0f)
+                        )
 
-                    // Danger line at bottom of board
-                    val dangerY = (bubbleRadius + 14 * bubbleRadius * 1.732f) * sY
-                    drawLine(
-                        color = Color(0xFFEF4444).copy(alpha = 0.45f),
-                        start = Offset(0f, dangerY),
-                        end = Offset(canvasW, dangerY),
-                        strokeWidth = 3f,
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 15f), 0f)
-                    )
-
-                    // Draw HexGrid bubbles
-                    for (r in 0 until viewModel.hexGrid.maxRows) {
-                        for (c in 0 until viewModel.hexGrid.getColsForRow(r)) {
-                            val b = viewModel.hexGrid.getBubble(r, c)
-                            if (b != null) {
-                                val (vx, vy) = viewModel.hexGrid.getCenter(r, c, bubbleRadius, virtualWidth)
-                                BubbleRenderer.drawBubble(
-                                    drawScope = this,
-                                    centerX = vx * sX,
-                                    centerY = vy * sY,
-                                    radius = bubbleRadius * sX,
-                                    color = b.color,
-                                    type = b.type,
-                                    petId = b.petId,
-                                    colorblindEnabled = saveState.colorblindEnabled
-                                )
+                        for (r in 0 until viewModel.hexGrid.maxRows) {
+                            for (c in 0 until viewModel.hexGrid.getColsForRow(r)) {
+                                val b = viewModel.hexGrid.getBubble(r, c)
+                                if (b != null) {
+                                    val (vx, vy) = viewModel.hexGrid.getCenter(r, c, bubbleRadius, virtualWidth)
+                                    BubbleRenderer.drawBubble(
+                                        drawScope = this,
+                                        centerX = vx * sX,
+                                        centerY = vy * sY,
+                                        radius = bubbleRadius * sX,
+                                        color = b.color,
+                                        type = b.type,
+                                        petId = b.petId,
+                                        colorblindEnabled = saveState.colorblindEnabled
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    // Draw Aiming Trajectory Guide
-                    if (state.playState == PlayState.AIMING && state.aimTrajectory.size >= 2) {
-                        for (i in 0 until state.aimTrajectory.size - 1) {
-                            val p1 = state.aimTrajectory[i]
-                            val p2 = state.aimTrajectory[i + 1]
-                            drawLine(
-                                color = if (state.isSuperAimActive) Color(0xFF38BDF8) else Color.White.copy(alpha = 0.8f),
-                                start = Offset(p1.x * sX, p1.y * sY),
-                                end = Offset(p2.x * sX, p2.y * sY),
-                                strokeWidth = if (state.isSuperAimActive) 6f else 4f,
-                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(15f, 15f), 0f)
+                        if (state.playState == PlayState.AIMING && state.aimTrajectory.size >= 2) {
+                            for (i in 0 until state.aimTrajectory.size - 1) {
+                                val p1 = state.aimTrajectory[i]
+                                val p2 = state.aimTrajectory[i + 1]
+                                drawLine(
+                                    color = if (state.isSuperAimActive) Color(0xFF38BDF8) else Color.White.copy(alpha = 0.8f),
+                                    start = Offset(p1.x * sX, p1.y * sY),
+                                    end = Offset(p2.x * sX, p2.y * sY),
+                                    strokeWidth = if (state.isSuperAimActive) 6f else 4f,
+                                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(15f, 15f), 0f)
+                                )
+                            }
+
+                            val endPoint = state.aimTrajectory.last()
+                            drawCircle(
+                                color = Color(0xFFFDE047).copy(alpha = 0.85f),
+                                radius = bubbleRadius * sX * 0.9f,
+                                center = Offset(endPoint.x * sX, endPoint.y * sY),
+                                style = Stroke(width = 3f)
                             )
                         }
 
-                        // Target reticle / landing preview
-                        val endPoint = state.aimTrajectory.last()
-                        drawCircle(
-                            color = Color(0xFFFDE047).copy(alpha = 0.85f),
-                            radius = bubbleRadius * sX * 0.9f,
-                            center = Offset(endPoint.x * sX, endPoint.y * sY),
-                            style = Stroke(width = 3f)
-                        )
-                    }
-
-                    // Draw in-flight projectile
-                    val proj = viewModel.currentProjectile
-                    if (proj != null) {
-                        BubbleRenderer.drawBubble(
-                            drawScope = this,
-                            centerX = proj.x * sX,
-                            centerY = proj.y * sY,
-                            radius = bubbleRadius * sX,
-                            color = proj.bubble.color,
-                            type = proj.bubble.type,
-                            petId = proj.bubble.petId,
-                            colorblindEnabled = saveState.colorblindEnabled
-                        )
-                    }
-
-                    // Draw Particles (pop bursts, sparkles, confetti)
-                    for (p in viewModel.particleSystem.particles) {
-                        drawCircle(
-                            color = p.color.copy(alpha = p.alpha),
-                            radius = p.size * sX,
-                            center = Offset(p.x * sX, p.y * sY)
-                        )
-                    }
-
-                    // Draw Falling Detached Bubbles
-                    for (fb in viewModel.particleSystem.fallingBubbles) {
-                        BubbleRenderer.drawBubble(
-                            drawScope = this,
-                            centerX = fb.x * sX,
-                            centerY = fb.y * sY,
-                            radius = fb.radius * sX,
-                            color = fb.color,
-                            type = fb.type,
-                            petId = fb.petId,
-                            colorblindEnabled = saveState.colorblindEnabled
-                        )
-                    }
-
-                    // Draw Floating Score Popups
-                    for (popup in viewModel.particleSystem.scorePopups) {
-                        try {
-                            val paint = android.graphics.Paint().apply {
-                                this.color = android.graphics.Color.argb(
-                                    (255 * popup.alpha).toInt(),
-                                    255, 215, 0
-                                )
-                                this.textSize = (32f * popup.scale) * sX
-                                this.isFakeBoldText = true
-                                this.textAlign = android.graphics.Paint.Align.CENTER
-                            }
-                            drawContext.canvas.nativeCanvas.drawText(
-                                popup.text,
-                                popup.x * sX,
-                                popup.y * sY,
-                                paint
+                        val proj = viewModel.currentProjectile
+                        if (proj != null) {
+                            BubbleRenderer.drawBubble(
+                                drawScope = this,
+                                centerX = proj.x * sX,
+                                centerY = proj.y * sY,
+                                radius = bubbleRadius * sX,
+                                color = proj.bubble.color,
+                                type = proj.bubble.type,
+                                petId = proj.bubble.petId,
+                                colorblindEnabled = saveState.colorblindEnabled
                             )
-                        } catch (_: Throwable) {}
-                    }
+                        }
 
-                    // Draw Shooter Mechanism at Bottom
-                    drawShooterPlatform(
-                        drawScope = this,
-                        centerX = shooterX * sX,
-                        centerY = shooterY * sY,
-                        bubbleRadius = bubbleRadius * sX
-                    )
+                        for (p in viewModel.particleSystem.particles) {
+                            drawCircle(
+                                color = p.color.copy(alpha = p.alpha),
+                                radius = p.size * sX,
+                                center = Offset(p.x * sX, p.y * sY)
+                            )
+                        }
 
-                    // Draw Current Shooter Bubble
-                    if (state.playState != PlayState.SHOOTING) {
-                        BubbleRenderer.drawBubble(
+                        for (fb in viewModel.particleSystem.fallingBubbles) {
+                            BubbleRenderer.drawBubble(
+                                drawScope = this,
+                                centerX = fb.x * sX,
+                                centerY = fb.y * sY,
+                                radius = fb.radius * sX,
+                                color = fb.color,
+                                type = fb.type,
+                                petId = fb.petId,
+                                colorblindEnabled = saveState.colorblindEnabled
+                            )
+                        }
+
+                        for (popup in viewModel.particleSystem.scorePopups) {
+                            try {
+                                val paint = android.graphics.Paint().apply {
+                                    this.color = android.graphics.Color.argb(
+                                        (255 * popup.alpha).toInt(),
+                                        255, 215, 0
+                                    )
+                                    this.textSize = (32f * popup.scale) * sX
+                                    this.isFakeBoldText = true
+                                    this.textAlign = android.graphics.Paint.Align.CENTER
+                                }
+                                drawContext.canvas.nativeCanvas.drawText(
+                                    popup.text,
+                                    popup.x * sX,
+                                    popup.y * sY,
+                                    paint
+                                )
+                            } catch (_: Throwable) {}
+                        }
+
+                        drawShooterPlatform(
                             drawScope = this,
                             centerX = shooterX * sX,
                             centerY = shooterY * sY,
-                            radius = bubbleRadius * sX,
-                            color = state.currentBubble.color,
-                            type = state.currentBubble.type,
-                            petId = state.currentBubble.petId,
+                            bubbleRadius = bubbleRadius * sX
+                        )
+
+                        if (state.playState != PlayState.SHOOTING) {
+                            BubbleRenderer.drawBubble(
+                                drawScope = this,
+                                centerX = shooterX * sX,
+                                centerY = shooterY * sY,
+                                radius = bubbleRadius * sX,
+                                color = state.currentBubble.color,
+                                type = state.currentBubble.type,
+                                petId = state.currentBubble.petId,
+                                colorblindEnabled = saveState.colorblindEnabled
+                            )
+                        }
+
+                        val nextX = (shooterX - 140f) * sX
+                        val nextY = (shooterY + 20f) * sY
+                        BubbleRenderer.drawBubble(
+                            drawScope = this,
+                            centerX = nextX,
+                            centerY = nextY,
+                            radius = (bubbleRadius * 0.72f) * sX,
+                            color = state.nextBubble.color,
+                            type = state.nextBubble.type,
+                            petId = state.nextBubble.petId,
                             colorblindEnabled = saveState.colorblindEnabled
                         )
                     }
 
-                    // Draw Next Bubble in Reserve Pedestal
-                    val nextX = (shooterX - 140f) * sX
-                    val nextY = (shooterY + 20f) * sY
-                    BubbleRenderer.drawBubble(
-                        drawScope = this,
-                        centerX = nextX,
-                        centerY = nextY,
-                        radius = (bubbleRadius * 0.72f) * sX,
-                        color = state.nextBubble.color,
-                        type = state.nextBubble.type,
-                        petId = state.nextBubble.petId,
-                        colorblindEnabled = saveState.colorblindEnabled
-                    )
-                }
-
-                // Bubble Swap Button Overlay
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 20.dp)
-                        .offset(x = (-45).dp)
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF3B82F6))
-                        .clickable { viewModel.swapBubbles() }
-                        .testTag("bubble_swap_btn"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SwapHoriz,
-                        contentDescription = "Swap Bubbles",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 20.dp)
+                            .offset(x = (-45).dp)
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF3B82F6))
+                            .clickable { viewModel.swapBubbles() }
+                            .testTag("bubble_swap_btn"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SwapHoriz,
+                            contentDescription = "Swap Bubbles",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
-        }
 
-            // 3. Bottom Booster Shelf
+            // 3. Bottom Booster Shelf With Cleared External Badges
             BoosterTray(
                 saveState = saveState,
                 onBoosterClick = { viewModel.activateBooster(it) }
             )
         }
 
-        // 4. Overlays: Pause, Victory, Defeat
         if (state.isPaused) {
             PauseDialog(
                 viewModel = viewModel,
@@ -427,7 +395,6 @@ fun TopGameHud(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Pause Button
         IconButton(
             onClick = onPauseClick,
             modifier = Modifier
@@ -443,7 +410,6 @@ fun TopGameHud(
             )
         }
 
-        // Center Level & Objective info
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = "LEVEL $levelNum",
@@ -464,7 +430,6 @@ fun TopGameHud(
             )
         }
 
-        // Shots Remaining Pill
         Box(
             modifier = Modifier
                 .shadow(4.dp, RoundedCornerShape(16.dp))
@@ -486,6 +451,9 @@ fun TopGameHud(
     }
 }
 
+/**
+ * বুস্টারের কাউন্টার নাম্বারটি বাইরে চমৎকারভাবে ভাসমান ব্যাজ আকারে দেওয়া হলো (ভেতরে ঢুকবে না)
+ */
 @Composable
 fun BoosterTray(
     saveState: com.example.game.data.GameSaveState,
@@ -494,7 +462,7 @@ fun BoosterTray(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF0F172A).copy(alpha = 0.95f))
+            .background(Color(0xFF0F172A).copy(alpha = 0.98f))
             .padding(horizontal = 8.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
@@ -515,36 +483,57 @@ fun BoosterTray(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
                     .clickable { onBoosterClick(booster) }
-                    .padding(4.dp)
+                    .padding(vertical = 4.dp, horizontal = 2.dp)
                     .testTag("booster_${booster.name.lowercase()}")
             ) {
+                // Outer Container for Icon + External Protruding Counter Badge
                 Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF1E293B))
-                        .border(1.5.dp, Color(0xFF818CF8), CircleShape),
+                    modifier = Modifier.size(52.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = booster.iconSymbol, fontSize = 20.sp)
-
-                    // Count Badge
+                    // Booster Icon Circle
                     Box(
                         modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .size(18.dp)
+                            .size(46.dp)
+                            .shadow(6.dp, CircleShape)
                             .clip(CircleShape)
-                            .background(Color(0xFFF59E0B)),
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color(0xFF334155), Color(0xFF1E293B))
+                                )
+                            )
+                            .border(1.5.dp, Color(0xFF818CF8), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = booster.iconSymbol, fontSize = 22.sp)
+                    }
+
+                    // 100% EXTERNAL 3D COUNT BADGE (সম্পূর্ণ বাইরে ভাসমান গোল্ডেন ব্যাজ)
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 4.dp, y = (-3).dp)
+                            .size(20.dp)
+                            .shadow(4.dp, CircleShape)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(Color(0xFFFDE047), Color(0xFFD97706))
+                                )
+                            )
+                            .border(1.5.dp, Color.White, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = if (count > 0) "$count" else "+",
                             color = Color(0xFF1E1B4B),
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.ExtraBold,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
+
                 Text(
                     text = booster.title.split(" ").first(),
                     color = Color.White.copy(alpha = 0.85f),
@@ -563,7 +552,6 @@ private fun drawShooterPlatform(
     centerY: Float,
     bubbleRadius: Float
 ) {
-    // Cannon Base Pedestal
     drawScope.drawCircle(
         color = Color(0xFF1E1B4B),
         radius = bubbleRadius * 1.55f,
@@ -576,7 +564,6 @@ private fun drawShooterPlatform(
         style = Stroke(width = 4f)
     )
 
-    // Next Bubble Pedestal on Left
     drawScope.drawCircle(
         color = Color(0xFF1E293B),
         radius = bubbleRadius * 0.95f,
@@ -726,7 +713,6 @@ fun DefeatDialog(
                     modifier = Modifier.padding(top = 8.dp, bottom = 20.dp)
                 )
 
-                // +5 Shots revive option
                 GlossyButton(
                     text = "+5 SHOTS (🪙 60)",
                     onClick = onContinueShots,

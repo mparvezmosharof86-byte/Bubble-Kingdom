@@ -1,8 +1,14 @@
 package com.example.game.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -23,32 +30,50 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.game.model.BoosterType
 import com.example.game.ui.components.CoinPill
+import com.example.game.ui.components.GlossyButton
 import com.example.game.viewmodel.GameScreen
 import com.example.game.viewmodel.GameViewModel
 
 @Composable
 fun EventsScreen(viewModel: GameViewModel) {
     val saveState by viewModel.saveState.collectAsState()
+
+    var showStarTournamentModal by remember { mutableStateOf(false) }
+    var showRainbowBlitzModal by remember { mutableStateOf(false) }
+
+    val totalStars = saveState.levelStars.values.sum()
+    val tournamentTargetStars = 30
+    val starProgress = (totalStars.toFloat() / tournamentTargetStars).coerceIn(0f, 1f)
 
     Box(
         modifier = Modifier
@@ -58,7 +83,7 @@ fun EventsScreen(viewModel: GameViewModel) {
                     listOf(
                         Color(0xFF0F172A),
                         Color(0xFF1E1B4B),
-                        Color(0xFF3B0764)
+                        Color(0xFF2E1065)
                     )
                 )
             )
@@ -66,10 +91,12 @@ fun EventsScreen(viewModel: GameViewModel) {
             .testTag("events_screen")
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
+
+            // 1. TOP BAR
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -92,215 +119,675 @@ fun EventsScreen(viewModel: GameViewModel) {
                     text = "👑 KINGDOM EVENTS 👑",
                     color = Color(0xFFFDE047),
                     fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.sp
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.2.sp
                 )
 
                 CoinPill(coins = saveState.playerCoins)
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
+            // 2. EVENTS LIST
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // EVENT 1: PET SANCTUARY
                 item {
-                    EventHubCard(
+                    ThreeDEventHubCard(
                         title = "Pet Sanctuary",
                         subtitle = "Rescue cute furry companions and boost their magical perks!",
-                        statusText = "🐾 ${saveState.rescuedPets.size} Rescued",
+                        statusTag = "🐾 ${saveState.rescuedPets.size} RESCUED",
+                        tagColor = Color(0xFFF472B6),
                         icon = Icons.Default.Pets,
-                        gradient = listOf(Color(0xFFEC4899), Color(0xFFBE185D)),
-                        badgeColor = Color(0xFFF472B6),
-                        onClick = { viewModel.navigateTo(GameScreen.PET_SANCTUARY) },
-                        testTag = "event_pet_sanctuary"
+                        gradient = listOf(Color(0xFFBE185D), Color(0xFF831843)),
+                        borderColor = Color(0xFFF472B6),
+                        buttonText = "ENTER SANCTUARY ▶",
+                        onClick = { viewModel.navigateTo(GameScreen.PET_SANCTUARY) }
                     )
                 }
 
+                // EVENT 2: ROYAL ACHIEVEMENTS
                 item {
-                    EventHubCard(
+                    ThreeDEventHubCard(
                         title = "Royal Achievements",
                         subtitle = "Conquer levels, unlock trophies, and collect bonus coins!",
-                        statusText = "🏆 ${saveState.completedAchievements.size} / ${AchievementRegistry.ALL.size} Badges",
+                        statusTag = "🏆 ${saveState.completedAchievements.size} / ${AchievementRegistry.ALL.size} TROPHIES",
+                        tagColor = Color(0xFF2DD4BF),
                         icon = Icons.Default.EmojiEvents,
-                        gradient = listOf(Color(0xFF0D9488), Color(0xFF0F766E)),
-                        badgeColor = Color(0xFF2DD4BF),
-                        onClick = { viewModel.navigateTo(GameScreen.ACHIEVEMENTS) },
-                        testTag = "event_achievements"
+                        gradient = listOf(Color(0xFF0F766E), Color(0xFF134E4A)),
+                        borderColor = Color(0xFF2DD4BF),
+                        buttonText = "VIEW TROPHIES ▶",
+                        onClick = { viewModel.navigateTo(GameScreen.ACHIEVEMENTS) }
                     )
                 }
 
+                // EVENT 3: STAR TOURNAMENT (3D READY EVENT)
                 item {
-                    UpcomingEventCard(
-                        title = "Star Tournament",
-                        subtitle = "Climb the leaderboard by scoring 3-stars across all worlds!",
-                        iconEmoji = "⭐",
-                        gradient = listOf(Color(0xFF7C3AED), Color(0xFF5B21B6)),
-                        unlockNote = "Starting Soon • Next Event"
+                    ThreeDStarTournamentCard(
+                        currentStars = totalStars,
+                        targetStars = tournamentTargetStars,
+                        progress = starProgress,
+                        onClick = { showStarTournamentModal = true }
                     )
                 }
 
+                // EVENT 4: RAINBOW BLITZ RUSH (3D READY EVENT)
                 item {
-                    UpcomingEventCard(
-                        title = "Rainbow Blitz Rush",
-                        subtitle = "Timed combo challenge with endless wild bubbles and jackpot rewards!",
-                        iconEmoji = "🌈",
-                        gradient = listOf(Color(0xFFD97706), Color(0xFFB45309)),
-                        unlockNote = "Coming Soon • Special Quest"
+                    ThreeDRainbowBlitzCard(
+                        onClick = { showRainbowBlitzModal = true }
                     )
                 }
             }
         }
-    }
-}
 
-@Composable
-fun EventHubCard(
-    title: String,
-    subtitle: String,
-    statusText: String,
-    icon: ImageVector,
-    gradient: List<Color>,
-    badgeColor: Color,
-    onClick: () -> Unit,
-    testTag: String
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(24.dp))
-            .clip(RoundedCornerShape(24.dp))
-            .background(Brush.horizontalGradient(gradient))
-            .border(2.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
-            .clickable { onClick() }
-            .padding(18.dp)
-            .testTag(testTag)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(60.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.2f))
-                    .border(2.dp, Color.White, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = subtitle,
-                    color = Color.White.copy(alpha = 0.85f),
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
-                    modifier = Modifier.padding(top = 2.dp, bottom = 6.dp)
-                )
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.Black.copy(alpha = 0.25f))
-                        .padding(horizontal = 10.dp, vertical = 3.dp)
-                ) {
-                    Text(
-                        text = statusText,
-                        color = Color(0xFFFEF08A),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+        // 3. INTERACTIVE 3D STAR TOURNAMENT MODAL
+        if (showStarTournamentModal) {
+            StarTournamentDialog(
+                currentStars = totalStars,
+                onDismiss = { showStarTournamentModal = false },
+                onPlayNow = {
+                    showStarTournamentModal = false
+                    viewModel.navigateTo(GameScreen.WORLD_MAP)
                 }
-            }
+            )
+        }
 
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = "Open",
-                tint = Color.White,
-                modifier = Modifier.size(28.dp)
+        // 4. INTERACTIVE 3D RAINBOW BLITZ MODAL
+        if (showRainbowBlitzModal) {
+            RainbowBlitzDialog(
+                playerCoins = saveState.playerCoins,
+                onDismiss = { showRainbowBlitzModal = false },
+                onClaimBoost = {
+                    viewModel.repository.addBooster(BoosterType.RAINBOW_BUBBLE, 2)
+                    viewModel.soundManager.playPetRescueChime()
+                    showRainbowBlitzModal = false
+                },
+                onStartBlitz = {
+                    showRainbowBlitzModal = false
+                    viewModel.startLevel(saveState.unlockedLevel)
+                    viewModel.activateBooster(BoosterType.RAINBOW_BUBBLE)
+                }
             )
         }
     }
 }
 
+/**
+ * 3D STAR TOURNAMENT EVENT CARD (FULLY PREPARED & VIBRANT)
+ */
 @Composable
-fun UpcomingEventCard(
-    title: String,
-    subtitle: String,
-    iconEmoji: String,
-    gradient: List<Color>,
-    unlockNote: String
+fun ThreeDStarTournamentCard(
+    currentStars: Int,
+    targetStars: Int,
+    progress: Float,
+    onClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(24.dp))
-            .clip(RoundedCornerShape(24.dp))
-            .background(Brush.horizontalGradient(gradient.map { it.copy(alpha = 0.75f) }))
-            .border(1.5.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(24.dp))
+            .shadow(12.dp, RoundedCornerShape(26.dp))
+            .clip(RoundedCornerShape(26.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF4C1D95),
+                        Color(0xFF2E1065),
+                        Color(0xFF1E1B4B)
+                    )
+                )
+            )
+            .border(
+                2.5.dp,
+                Brush.verticalGradient(
+                    listOf(Color(0xFFFDE047), Color(0xFFF59E0B), Color(0xFF78350F))
+                ),
+                RoundedCornerShape(26.dp)
+            )
+            .clickable { onClick() }
             .padding(18.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(54.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.3f)),
-                contentAlignment = Alignment.Center
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = iconEmoji, fontSize = 28.sp)
+                // 3D Canvas Golden Trophy Cup
+                CanvasStarTrophy(modifier = Modifier.size(56.dp))
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Star Tournament",
+                            color = Color(0xFFFDE047),
+                            fontSize = 19.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFFEF4444))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "LIVE EVENT",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "Score 3-stars in levels to climb the royal ranks and win 🪙 5,000 Coins!",
+                        color = Color(0xFFE0E7FF),
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                        modifier = Modifier.padding(top = 2.dp, bottom = 6.dp)
+                    )
+
+                    // 3D Progress Bar
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Stars Collected: $currentStars / $targetStars",
+                                color = Color(0xFFFEF3C7),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${(progress * 100).toInt()}%",
+                                color = Color(0xFFFDE047),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(10.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF1E1B4B))
+                                .border(1.dp, Color(0xFF6366F1), CircleShape)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(progress)
+                                    .height(10.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            listOf(Color(0xFFFDE047), Color(0xFFF59E0B), Color(0xFFD97706))
+                                        )
+                                    )
+                            )
+                        }
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = title,
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+            // 3D Action Button inside card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(46.dp)
+                    .shadow(6.dp, RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color(0xFFF59E0B), Color(0xFFB45309))
+                        )
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    .border(1.5.dp, Color(0xFFFFF9C4), RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = "Upcoming",
-                        tint = Color(0xFFFDE047),
-                        modifier = Modifier.size(14.dp)
+                        imageVector = Icons.Default.EmojiEvents,
+                        contentDescription = null,
+                        tint = Color(0xFF1E1B4B),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "LEADERBOARD & PRIZES ▶",
+                        color = Color(0xFF1E1B4B),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.5.sp
                     )
                 }
-                Text(
-                    text = subtitle,
-                    color = Color.White.copy(alpha = 0.7f),
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
+            }
+        }
+    }
+}
+
+/**
+ * 3D RAINBOW BLITZ RUSH EVENT CARD (FULLY PREPARED & VIBRANT)
+ */
+@Composable
+fun ThreeDRainbowBlitzCard(
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(12.dp, RoundedCornerShape(26.dp))
+            .clip(RoundedCornerShape(26.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF9A3412),
+                        Color(0xFF7C2D12),
+                        Color(0xFF431407)
+                    )
                 )
+            )
+            .border(
+                2.5.dp,
+                Brush.verticalGradient(
+                    listOf(Color(0xFFFFD54F), Color(0xFFEA580C), Color(0xFF7C2D12))
+                ),
+                RoundedCornerShape(26.dp)
+            )
+            .clickable { onClick() }
+            .padding(18.dp)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 3D Canvas Rainbow Magic Orb
+                CanvasRainbowOrb(modifier = Modifier.size(56.dp))
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Rainbow Blitz Rush",
+                            color = Color(0xFFFED7AA),
+                            fontSize = 19.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFF10B981))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "ACTIVE",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "Special quest: Play with super rainbow wildcard bubbles and claim explosive rewards!",
+                        color = Color(0xFFFFF7ED),
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                        modifier = Modifier.padding(top = 2.dp, bottom = 6.dp)
+                    )
+
+                    Text(
+                        text = "🎁 Reward: 2x Free Rainbow Boosters + 🪙 1,500 Coins",
+                        color = Color(0xFFFDE047),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 3D Action Button inside card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(46.dp)
+                    .shadow(6.dp, RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color(0xFF10B981), Color(0xFF047857))
+                        )
+                    )
+                    .border(1.5.dp, Color(0xFFBBF7D0), RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "⚡ CLAIM BOOST & PLAY ▶",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ThreeDEventHubCard(
+    title: String,
+    subtitle: String,
+    statusTag: String,
+    tagColor: Color,
+    icon: ImageVector,
+    gradient: List<Color>,
+    borderColor: Color,
+    buttonText: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(10.dp, RoundedCornerShape(26.dp))
+            .clip(RoundedCornerShape(26.dp))
+            .background(Brush.verticalGradient(gradient))
+            .border(2.dp, borderColor.copy(alpha = 0.7f), RoundedCornerShape(26.dp))
+            .clickable { onClick() }
+            .padding(18.dp)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.2f))
+                        .border(2.dp, Color.White, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = title,
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        color = Color.White,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        text = subtitle,
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                        modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.Black.copy(alpha = 0.35f))
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = statusTag,
+                            color = tagColor,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.White.copy(alpha = 0.15f))
+                    .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
+            ) {
                 Text(
-                    text = "🔒 $unlockNote",
-                    color = Color(0xFFFDE047),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold
+                    text = buttonText,
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Black
                 )
             }
         }
     }
 }
+
+/**
+ * 3D CANVAS DRAWN GOLDEN TROPHY CUP
+ */
+@Composable
+fun CanvasStarTrophy(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+
+        // Drop shadow
+        drawOval(
+            color = Color.Black.copy(alpha = 0.4f),
+            topLeft = Offset(4f, h - 8f),
+            size = Size(w - 8f, 8f)
+        )
+
+        // Trophy Base Pedestal
+        drawRoundRect(
+            brush = Brush.verticalGradient(
+                listOf(Color(0xFFFFF59D), Color(0xFFFFB300), Color(0xFF78350F))
+            ),
+            topLeft = Offset(w * 0.25f, h * 0.75f),
+            size = Size(w * 0.5f, h * 0.18f),
+            cornerRadius = CornerRadius(4f, 4f)
+        )
+
+        // Trophy Stem
+        drawRect(
+            brush = Brush.verticalGradient(
+                listOf(Color(0xFFFFD54F), Color(0xFFD97706))
+            ),
+            topLeft = Offset(w * 0.42f, h * 0.55f),
+            size = Size(w * 0.16f, h * 0.22f)
+        )
+
+        // Trophy Cup Body
+        val cupPath = Path().apply {
+            moveTo(w * 0.18f, h * 0.12f)
+            lineTo(w * 0.82f, h * 0.12f)
+            cubicTo(
+                w * 0.82f, h * 0.48f,
+                w * 0.62f, h * 0.58f,
+                w * 0.5f, h * 0.58f
+            )
+            cubicTo(
+                w * 0.38f, h * 0.58f,
+                w * 0.18f, h * 0.48f,
+                w * 0.18f, h * 0.12f
+            )
+            close()
+        }
+        drawPath(
+            cupPath,
+            brush = Brush.verticalGradient(
+                listOf(Color(0xFFFFFDE7), Color(0xFFFFD54F), Color(0xFFF57F17), Color(0xFF78350F))
+            )
+        )
+
+        // Star inside cup
+        drawCircle(
+            brush = Brush.radialGradient(
+                listOf(Color(0xFFFFFFFF), Color(0xFFFFD54F)),
+                center = Offset(w * 0.5f, h * 0.32f),
+                radius = w * 0.16f
+            ),
+            radius = w * 0.16f,
+            center = Offset(w * 0.5f, h * 0.32f)
+        )
+    }
+}
+
+/**
+ * 3D CANVAS DRAWN RAINBOW MAGIC ORB
+ */
+@Composable
+fun CanvasRainbowOrb(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val radius = size.width / 2f - 4f
+
+        // Shadow
+        drawCircle(
+            color = Color.Black.copy(alpha = 0.45f),
+            radius = radius,
+            center = Offset(center.x, center.y + 4f)
+        )
+
+        // Rainbow Sweep Gradient
+        val rainbowBrush = Brush.sweepGradient(
+            colors = listOf(
+                Color(0xFFEF4444),
+                Color(0xFFF59E0B),
+                Color(0xFF10B981),
+                Color(0xFF06B6D4),
+                Color(0xFF8B5CF6),
+                Color(0xFFEC4899),
+                Color(0xFFEF4444)
+            ),
+            center = center
+        )
+        drawCircle(brush = rainbowBrush, radius = radius, center = center)
+
+        // Glass Gloss Specular Ring
+        drawCircle(
+            color = Color.White.copy(alpha = 0.5f),
+            radius = radius * 0.72f,
+            center = center,
+            style = Stroke(width = 3f)
+        )
+
+        // Top-left Glare
+        drawOval(
+            color = Color.White.copy(alpha = 0.8f),
+            topLeft = Offset(center.x - radius * 0.5f, center.y - radius * 0.6f),
+            size = Size(radius * 0.6f, radius * 0.35f)
+        )
+    }
+}
+
+/**
+ * 3D STAR TOURNAMENT LEADERBOARD & REWARD DIALOG
+ */
+@Composable
+fun StarTournamentDialog(
+    currentStars: Int,
+    onDismiss: () -> Unit,
+    onPlayNow: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.75f))
+            .clickable(enabled = false) {},
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(20.dp)
+                .shadow(20.dp, RoundedCornerShape(32.dp))
+                .clip(RoundedCornerShape(32.dp))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xFF2E1065), Color(0xFF1E1B4B), Color(0xFF0F172A))
+                    )
+                )
+                .border(2.5.dp, Color(0xFFFDE047), RoundedCornerShape(32.dp))
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "🏆 STAR TOURNAMENT 🏆",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFFFDE047)
+                )
+
+                Text(
+                    text = "Ends in: 2 Days 14 Hours • Royal League",
+                    fontSize = 12.sp,
+                    color = Color(0xFFC7D2FE),
+                    modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+                )
+
+                // Leaderboard Tiers
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    LeaderboardRow(rank = "🥇 1st", name = "You (Player)", score = "$currentStars Stars", prize = "🪙 5,000 + 3 Bombs", isYou = true)
+                    LeaderboardRow(rank = "🥈 2nd", name = "Princess Pippa", score = "28 Stars", prize = "🪙 2,500 + 2 Zap", isYou = false)
+                    LeaderboardRow(rank = "🥉 3rd", name = "Knight Barnaby", score = "24 Stars", prize = "🪙 1,000 + 1 Rainbow", isYou = false)
+                    LeaderboardRow(rank = "🎖️ 4th", name = "Sage Oliver", score = "19 Stars", prize = "🪙 500 Coins", isYou = false)
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                GlossyButton(
+                    text = "PLAY LEVELS FOR STARS ▶",
+                    onClick = onPlayNow,
+                    colors = listOf(Color(0xFF10B981), Color(0xFF047857)),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                GlossyButton(
+                    text = "CLOSE",
+                    onClick = onDismiss,
+                    colors = listOf(Color(0xFF475569), Color(0xFF334155)),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun LeaderboardRow(

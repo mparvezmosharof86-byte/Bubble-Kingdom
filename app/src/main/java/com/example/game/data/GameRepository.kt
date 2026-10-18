@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.example.game.model.BoosterType
 import org.json.JSONObject
-import java.util.Calendar
 
 data class GameSaveState(
     val unlockedLevel: Int = 1,
@@ -24,6 +23,7 @@ data class GameSaveState(
     val dailyRewardStreak: Int = 0,
     val lastDailyClaimDay: Long = 0L,
     val lastLuckySpinDay: Long = 0L,
+    val lastChestClaimTimeMs: Long = 0L, // 24h Free Chest Timestamp
     val completedAchievements: Set<String> = emptySet(),
     val musicVolume: Float = 0.6f,
     val sfxVolume: Float = 1.0f,
@@ -66,7 +66,6 @@ class GameRepository(context: Context) {
             updatedBonds[pet] = (updatedBonds[pet] ?: 0) + 1
         }
 
-        // Check achievements
         val achievements = cachedState.completedAchievements.toMutableSet()
         achievements.add("first_win")
         if (updatedStars.values.count { it == 3 } >= 10) achievements.add("star_collector")
@@ -119,10 +118,24 @@ class GameRepository(context: Context) {
         return true
     }
 
+    fun claimFreeChest(): Pair<Boolean, GameSaveState> {
+        val now = System.currentTimeMillis()
+        val cooldownMs = 24 * 60 * 60 * 1000L
+        if (now - cachedState.lastChestClaimTimeMs < cooldownMs) {
+            return Pair(false, cachedState)
+        }
+        val newState = cachedState.copy(
+            playerCoins = cachedState.playerCoins + 200,
+            lastChestClaimTimeMs = now
+        )
+        persistState(newState)
+        return Pair(true, newState)
+    }
+
     fun claimDailyReward(): Pair<Boolean, GameSaveState> {
         val currentDay = System.currentTimeMillis() / (1000 * 60 * 60 * 24)
         if (currentDay <= cachedState.lastDailyClaimDay) {
-            return Pair(false, cachedState) // Already claimed today
+            return Pair(false, cachedState)
         }
 
         val streak = if (currentDay - cachedState.lastDailyClaimDay == 1L) {
@@ -131,7 +144,6 @@ class GameRepository(context: Context) {
             1
         }
 
-        // Daily reward amounts
         val bonusCoins = streak * 100
         val bonusBooster = when (streak) {
             3 -> BoosterType.BOMB_BUBBLE
@@ -220,13 +232,13 @@ class GameRepository(context: Context) {
             json.put("dailyRewardStreak", state.dailyRewardStreak)
             json.put("lastDailyClaimDay", state.lastDailyClaimDay)
             json.put("lastLuckySpinDay", state.lastLuckySpinDay)
+            json.put("lastChestClaimTimeMs", state.lastChestClaimTimeMs)
             json.put("musicVolume", state.musicVolume.toDouble())
             json.put("sfxVolume", state.sfxVolume.toDouble())
             json.put("voiceVolume", state.voiceVolume.toDouble())
             json.put("hapticsEnabled", state.hapticsEnabled)
             json.put("colorblindEnabled", state.colorblindEnabled)
 
-            // Maps & Sets
             val starsJson = JSONObject()
             state.levelStars.forEach { (k, v) -> starsJson.put(k.toString(), v) }
             json.put("levelStars", starsJson)
@@ -262,6 +274,7 @@ class GameRepository(context: Context) {
             val dailyRewardStreak = json.optInt("dailyRewardStreak", 0)
             val lastDailyClaimDay = json.optLong("lastDailyClaimDay", 0L)
             val lastLuckySpinDay = json.optLong("lastLuckySpinDay", 0L)
+            val lastChestClaimTimeMs = json.optLong("lastChestClaimTimeMs", 0L)
             val musicVolume = json.optDouble("musicVolume", 0.6).toFloat()
             val sfxVolume = json.optDouble("sfxVolume", 1.0).toFloat()
             val voiceVolume = json.optDouble("voiceVolume", 1.0).toFloat()
@@ -321,6 +334,7 @@ class GameRepository(context: Context) {
                 dailyRewardStreak = dailyRewardStreak,
                 lastDailyClaimDay = lastDailyClaimDay,
                 lastLuckySpinDay = lastLuckySpinDay,
+                lastChestClaimTimeMs = lastChestClaimTimeMs,
                 completedAchievements = completedAchievements,
                 musicVolume = musicVolume,
                 sfxVolume = sfxVolume,

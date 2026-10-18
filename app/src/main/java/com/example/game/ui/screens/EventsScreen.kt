@@ -1,14 +1,9 @@
 package com.example.game.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,7 +13,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -28,10 +22,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Pets
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -55,7 +47,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.game.model.BoosterType
@@ -198,7 +189,6 @@ fun EventsScreen(viewModel: GameViewModel) {
         // 4. INTERACTIVE 3D RAINBOW BLITZ MODAL
         if (showRainbowBlitzModal) {
             RainbowBlitzDialog(
-                playerCoins = saveState.playerCoins,
                 onDismiss = { showRainbowBlitzModal = false },
                 onClaimBoost = {
                     viewModel.repository.addBooster(BoosterType.RAINBOW_BUBBLE, 2)
@@ -215,9 +205,6 @@ fun EventsScreen(viewModel: GameViewModel) {
     }
 }
 
-/**
- * 3D STAR TOURNAMENT EVENT CARD (FULLY PREPARED & VIBRANT)
- */
 @Composable
 fun ThreeDStarTournamentCard(
     currentStars: Int,
@@ -252,10 +239,8 @@ fun ThreeDStarTournamentCard(
         Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // 3D Canvas Golden Trophy Cup
                 CanvasStarTrophy(modifier = Modifier.size(56.dp))
 
                 Spacer(modifier = Modifier.width(14.dp))
@@ -295,7 +280,6 @@ fun ThreeDStarTournamentCard(
                         modifier = Modifier.padding(top = 2.dp, bottom = 6.dp)
                     )
 
-                    // 3D Progress Bar
                     Column {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -343,7 +327,6 @@ fun ThreeDStarTournamentCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 3D Action Button inside card
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -379,9 +362,6 @@ fun ThreeDStarTournamentCard(
     }
 }
 
-/**
- * 3D RAINBOW BLITZ RUSH EVENT CARD (FULLY PREPARED & VIBRANT)
- */
 @Composable
 fun ThreeDRainbowBlitzCard(
     onClick: () -> Unit
@@ -415,7 +395,6 @@ fun ThreeDRainbowBlitzCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 3D Canvas Rainbow Magic Orb
                 CanvasRainbowOrb(modifier = Modifier.size(56.dp))
 
                 Spacer(modifier = Modifier.width(14.dp))
@@ -466,7 +445,6 @@ fun ThreeDRainbowBlitzCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 3D Action Button inside card
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -481,15 +459,13 @@ fun ThreeDRainbowBlitzCard(
                     .border(1.5.dp, Color(0xFFBBF7D0), RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "⚡ CLAIM BOOST & PLAY ▶",
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 0.5.sp
-                    )
-                }
+                Text(
+                    text = "⚡ CLAIM BOOST & PLAY ▶",
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.5.sp
+                )
             }
         }
     }
@@ -592,23 +568,18 @@ fun ThreeDEventHubCard(
     }
 }
 
-/**
- * 3D CANVAS DRAWN GOLDEN TROPHY CUP
- */
 @Composable
 fun CanvasStarTrophy(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
 
-        // Drop shadow
         drawOval(
             color = Color.Black.copy(alpha = 0.4f),
             topLeft = Offset(4f, h - 8f),
             size = Size(w - 8f, 8f)
         )
 
-        // Trophy Base Pedestal
         drawRoundRect(
             brush = Brush.verticalGradient(
                 listOf(Color(0xFFFFF59D), Color(0xFFFFB300), Color(0xFF78350F))
@@ -618,7 +589,6 @@ fun CanvasStarTrophy(modifier: Modifier = Modifier) {
             cornerRadius = CornerRadius(4f, 4f)
         )
 
-        // Trophy Stem
         drawRect(
             brush = Brush.verticalGradient(
                 listOf(Color(0xFFFFD54F), Color(0xFFD97706))
@@ -627,20 +597,11 @@ fun CanvasStarTrophy(modifier: Modifier = Modifier) {
             size = Size(w * 0.16f, h * 0.22f)
         )
 
-        // Trophy Cup Body
         val cupPath = Path().apply {
             moveTo(w * 0.18f, h * 0.12f)
             lineTo(w * 0.82f, h * 0.12f)
-            cubicTo(
-                w * 0.82f, h * 0.48f,
-                w * 0.62f, h * 0.58f,
-                w * 0.5f, h * 0.58f
-            )
-            cubicTo(
-                w * 0.38f, h * 0.58f,
-                w * 0.18f, h * 0.48f,
-                w * 0.18f, h * 0.12f
-            )
+            cubicTo(w * 0.82f, h * 0.48f, w * 0.62f, h * 0.58f, w * 0.5f, h * 0.58f)
+            cubicTo(w * 0.38f, h * 0.58f, w * 0.18f, h * 0.48f, w * 0.18f, h * 0.12f)
             close()
         }
         drawPath(
@@ -650,7 +611,6 @@ fun CanvasStarTrophy(modifier: Modifier = Modifier) {
             )
         )
 
-        // Star inside cup
         drawCircle(
             brush = Brush.radialGradient(
                 listOf(Color(0xFFFFFFFF), Color(0xFFFFD54F)),
@@ -663,23 +623,18 @@ fun CanvasStarTrophy(modifier: Modifier = Modifier) {
     }
 }
 
-/**
- * 3D CANVAS DRAWN RAINBOW MAGIC ORB
- */
 @Composable
 fun CanvasRainbowOrb(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val center = Offset(size.width / 2f, size.height / 2f)
         val radius = size.width / 2f - 4f
 
-        // Shadow
         drawCircle(
             color = Color.Black.copy(alpha = 0.45f),
             radius = radius,
             center = Offset(center.x, center.y + 4f)
         )
 
-        // Rainbow Sweep Gradient
         val rainbowBrush = Brush.sweepGradient(
             colors = listOf(
                 Color(0xFFEF4444),
@@ -694,7 +649,6 @@ fun CanvasRainbowOrb(modifier: Modifier = Modifier) {
         )
         drawCircle(brush = rainbowBrush, radius = radius, center = center)
 
-        // Glass Gloss Specular Ring
         drawCircle(
             color = Color.White.copy(alpha = 0.5f),
             radius = radius * 0.72f,
@@ -702,7 +656,6 @@ fun CanvasRainbowOrb(modifier: Modifier = Modifier) {
             style = Stroke(width = 3f)
         )
 
-        // Top-left Glare
         drawOval(
             color = Color.White.copy(alpha = 0.8f),
             topLeft = Offset(center.x - radius * 0.5f, center.y - radius * 0.6f),
@@ -711,9 +664,6 @@ fun CanvasRainbowOrb(modifier: Modifier = Modifier) {
     }
 }
 
-/**
- * 3D STAR TOURNAMENT LEADERBOARD & REWARD DIALOG
- */
 @Composable
 fun StarTournamentDialog(
     currentStars: Int,
@@ -756,7 +706,6 @@ fun StarTournamentDialog(
                     modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
                 )
 
-                // Leaderboard Tiers
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -791,3 +740,133 @@ fun StarTournamentDialog(
 
 @Composable
 fun LeaderboardRow(
+    rank: String,
+    name: String,
+    score: String,
+    prize: String,
+    isYou: Boolean
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isYou) Color(0xFF4338CA) else Color(0xFF1E293B).copy(alpha = 0.8f))
+            .border(1.dp, if (isYou) Color(0xFFFDE047) else Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text = rank, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = name,
+                color = if (isYou) Color(0xFFFEF08A) else Color.White,
+                fontSize = 13.sp,
+                fontWeight = if (isYou) FontWeight.Black else FontWeight.Medium
+            )
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text(text = score, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(text = prize, color = Color(0xFFFBBF24), fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+@Composable
+fun RainbowBlitzDialog(
+    onDismiss: () -> Unit,
+    onClaimBoost: () -> Unit,
+    onStartBlitz: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.75f))
+            .clickable(enabled = false) {},
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(20.dp)
+                .shadow(20.dp, RoundedCornerShape(32.dp))
+                .clip(RoundedCornerShape(32.dp))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xFF7C2D12), Color(0xFF431407), Color(0xFF0F172A))
+                    )
+                )
+                .border(2.5.dp, Color(0xFFFB923C), RoundedCornerShape(32.dp))
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "🌈 RAINBOW BLITZ RUSH ⚡",
+                    fontSize = 21.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFFFED7AA)
+                )
+
+                Text(
+                    text = "Special Event Quest Activated!",
+                    fontSize = 13.sp,
+                    color = Color(0xFFFFEDD5),
+                    modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFF1E293B).copy(alpha = 0.9f))
+                        .border(1.dp, Color(0xFFF97316), RoundedCornerShape(16.dp))
+                        .padding(14.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "🎁 Special Event Bonus:",
+                            color = Color(0xFFFEF08A),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "• Claim +2 Free Rainbow Bubbles instantly\n• All rainbow matches grant +250 extra combo score\n• Pop 25 rainbow bubbles to unlock Mega Chest",
+                            color = Color.White.copy(alpha = 0.9f),
+                            fontSize = 12.sp,
+                            lineHeight = 18.sp,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                GlossyButton(
+                    text = "CLAIM 2x RAINBOW BUBBLES 🎁",
+                    onClick = onClaimBoost,
+                    colors = listOf(Color(0xFFF59E0B), Color(0xFFD97706)),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                GlossyButton(
+                    text = "PLAY LEVEL WITH RAINBOW ▶",
+                    onClick = onStartBlitz,
+                    colors = listOf(Color(0xFF10B981), Color(0xFF047857)),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                GlossyButton(
+                    text = "CLOSE",
+                    onClick = onDismiss,
+                    colors = listOf(Color(0xFF475569), Color(0xFF334155)),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}

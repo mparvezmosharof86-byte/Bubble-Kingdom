@@ -5,6 +5,9 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build Debug APK
@@ -59,9 +62,17 @@ jobs:
           cd "$PROJECT_DIR"
           gradle assembleDebug --no-daemon --no-configuration-cache --stacktrace
 
-      - name: Upload Debug APK Artifact
-        uses: actions/upload-artifact@v4
+      - name: Prepare Direct APK
+        run: |
+          mkdir -p release_apk
+          find . -name "*.apk" -exec cp {} release_apk/Bubble-Kingdom.apk \;
+
+      - name: Create Direct APK Release (No Zip Needed!)
+        uses: softprops/action-gh-release@v2
         with:
-          name: Bubble-Kingdom-Debug-APK
-          path: '**/app/build/outputs/apk/debug/*.apk'
-          retention-days: 7
+          tag_name: latest-build
+          name: "Bubble Kingdom Direct APK"
+          body: "Direct APK file ready to install on Android without unzipping!"
+          files: release_apk/Bubble-Kingdom.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

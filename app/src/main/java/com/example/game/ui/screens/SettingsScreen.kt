@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -156,7 +155,6 @@ fun SettingsScreen(viewModel: GameViewModel) {
             // Information & Safety Section
             SettingsSectionHeader(title = "ABOUT & PRIVACY")
 
-            // Privacy Policy Item (ডাইরেক্ট ব্রাউজারে ওপেন হবে + ফলব্যাক ডায়ালগ)
             SettingsActionItem(
                 label = "🔒 Privacy Policy & Data Safety",
                 subtitle = "Child-safe, 100% offline gameplay, no data collected",
@@ -189,7 +187,7 @@ fun SettingsScreen(viewModel: GameViewModel) {
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // Privacy Policy Dialog (Fallback)
+        // Privacy Policy Fallback Dialog
         if (showPrivacyDialog) {
             AlertDialog(
                 onDismissRequest = { showPrivacyDialog = false },
@@ -211,11 +209,7 @@ fun SettingsScreen(viewModel: GameViewModel) {
                         } catch (_: Exception) {}
                         showPrivacyDialog = false
                     }) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Open Full Policy", color = Color(0xFF6366F1), fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(imageVector = Icons.Default.OpenInNew, contentDescription = null, tint = Color(0xFF6366F1), modifier = Modifier.size(16.dp))
-                        }
+                        Text("Open Full Policy ↗", color = Color(0xFF6366F1), fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {
@@ -354,11 +348,12 @@ fun SettingsActionItem(
             Text(text = subtitle, color = Color(0xFF94A3B8), fontSize = 12.sp)
         }
         if (hasExternalLink) {
-            Icon(
-                imageVector = Icons.Default.OpenInNew,
-                contentDescription = "Open link",
-                tint = Color(0xFF818CF8),
-                modifier = Modifier.size(18.dp)
+            Text(
+                text = "↗",
+                color = Color(0xFF818CF8),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 8.dp)
             )
         }
     }

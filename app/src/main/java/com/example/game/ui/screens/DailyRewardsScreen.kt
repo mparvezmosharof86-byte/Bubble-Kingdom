@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -64,9 +65,12 @@ fun DailyRewardsScreen(viewModel: GameViewModel) {
         DailyGiftItem(7, "1000 Coins + Zap", "⚡", "Lightning Zap")
     )
 
-    val currentDayIndex = (saveState.dailyRewardStreak % 7)
     val todayEpoch = System.currentTimeMillis() / (1000 * 60 * 60 * 24)
     val canClaimToday = todayEpoch > saveState.lastDailyClaimDay
+    val streak = saveState.dailyRewardStreak
+
+    // Accurate Claim Status Calculation (Fixed Off-By-One Bug)
+    val activeClaimIdx = if (canClaimToday) (streak % 7) else -1
 
     Box(
         modifier = Modifier
@@ -124,9 +128,9 @@ fun DailyRewardsScreen(viewModel: GameViewModel) {
 
             // Streak Badge
             Text(
-                text = "🔥 ${saveState.dailyRewardStreak}-Day Streak!",
+                text = "🔥 $streak-Day Streak!",
                 color = Color(0xFFFB923C),
-                fontSize = 18.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.ExtraBold
             )
             Text(
@@ -136,7 +140,7 @@ fun DailyRewardsScreen(viewModel: GameViewModel) {
                 modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
             )
 
-            // 7 Days Grid
+            // 7 Days Grid with Fixed Single-Day Selection
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -144,20 +148,27 @@ fun DailyRewardsScreen(viewModel: GameViewModel) {
                 modifier = Modifier.weight(1f)
             ) {
                 itemsIndexed(gifts) { idx, gift ->
-                    val isPast = idx < currentDayIndex || (idx == currentDayIndex && !canClaimToday)
-                    val isCurrent = idx == currentDayIndex && canClaimToday
+                    // Exact mathematical claim status:
+                    val isClaimed = if (canClaimToday) {
+                        idx < (streak % 7)
+                    } else {
+                        // If already claimed today, only days up to streak have checkmarks!
+                        idx < (((streak - 1).coerceAtLeast(0) % 7) + 1)
+                    }
+                    val isCurrent = (idx == activeClaimIdx)
 
                     DailyCard(
                         gift = gift,
-                        isPast = isPast,
+                        isClaimed = isClaimed,
                         isCurrent = isCurrent
                     )
                 }
             }
 
-            // Claim Action
+            // Claim Action Button
+            val nextDayNum = (streak % 7) + 1
             GlossyButton(
-                text = if (canClaimToday) "CLAIM DAY ${currentDayIndex + 1} GIFT! 🎁" else "COME BACK TOMORROW ✨",
+                text = if (canClaimToday) "CLAIM DAY $nextDayNum GIFT! 🎁" else "COME BACK TOMORROW ✨",
                 onClick = {
                     if (canClaimToday) {
                         viewModel.claimDailyReward()
@@ -177,35 +188,43 @@ fun DailyRewardsScreen(viewModel: GameViewModel) {
 @Composable
 fun DailyCard(
     gift: DailyGiftItem,
-    isPast: Boolean,
+    isClaimed: Boolean,
     isCurrent: Boolean
 ) {
     Box(
         modifier = Modifier
-            .shadow(if (isCurrent) 8.dp else 2.dp, RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp))
-            .let { m ->
-                if (isCurrent) {
-                    m.background(Brush.verticalGradient(listOf(Color(0xFFF59E0B), Color(0xFFB45309))))
-                } else if (isPast) {
-                    m.background(Color(0xFF1E293B))
-                } else {
-                    m.background(Color(0xFF0F172A).copy(alpha = 0.8f))
+            .shadow(if (isCurrent) 10.dp else 3.dp, RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                when {
+                    isCurrent -> Brush.verticalGradient(
+                        listOf(Color(0xFFF59E0B), Color(0xFFB45309))
+                    )
+                    isClaimed -> Brush.verticalGradient(
+                        listOf(Color(0xFF1E293B), Color(0xFF0F172A))
+                    )
+                    else -> Brush.verticalGradient(
+                        listOf(Color(0xFF1E1B4B).copy(alpha = 0.85f), Color(0xFF0F172A))
+                    )
                 }
-            }
-            .border(
-                1.5.dp,
-                if (isCurrent) Color.White else Color.White.copy(alpha = 0.2f),
-                RoundedCornerShape(16.dp)
             )
-            .padding(10.dp)
+            .border(
+                width = if (isCurrent) 2.dp else 1.dp,
+                color = when {
+                    isCurrent -> Color(0xFFFDE047)
+                    isClaimed -> Color(0xFF10B981).copy(alpha = 0.6f)
+                    else -> Color.White.copy(alpha = 0.15f)
+                },
+                shape = RoundedCornerShape(18.dp)
+            )
+            .padding(12.dp)
             .testTag("daily_card_${gift.day}"),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = "Day ${gift.day}",
-                color = if (isCurrent) Color.White else Color(0xFF94A3B8),
+                color = if (isCurrent) Color(0xFFFEF3C7) else Color(0xFF94A3B8),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -216,20 +235,35 @@ fun DailyCard(
             )
             Text(
                 text = gift.rewardText,
-                color = if (isCurrent) Color.White else Color.White.copy(alpha = 0.8f),
+                color = if (isCurrent) Color.White else Color.White.copy(alpha = 0.85f),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center
             )
 
-            if (isPast) {
+            Spacer(modifier = Modifier.height(4.dp))
+
+            if (isClaimed) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Claimed",
+                        tint = Color(0xFF10B981),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = " Done",
+                        color = Color(0xFF10B981),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            } else if (!isCurrent) {
                 Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Claimed",
-                    tint = Color(0xFF10B981),
-                    modifier = Modifier
-                        .size(18.dp)
-                        .padding(top = 2.dp)
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = "Locked",
+                    tint = Color.White.copy(alpha = 0.35f),
+                    modifier = Modifier.size(14.dp)
                 )
             }
         }

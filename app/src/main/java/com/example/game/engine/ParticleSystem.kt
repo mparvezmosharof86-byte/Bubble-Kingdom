@@ -75,7 +75,6 @@ class ParticleSystem {
         val baseColor = bubbleColor.primaryColor
         val highlight = bubbleColor.highlightColor
 
-        // Expanding pop ring
         _particles.add(
             Particle(
                 x = x,
@@ -90,7 +89,6 @@ class ParticleSystem {
             )
         )
 
-        // Pop sparkle fragments
         for (i in 0 until 12) {
             val angle = (i * (2.0 * Math.PI) / 12.0) + Random.nextDouble(-0.2, 0.2)
             val speed = Random.nextFloat() * 260f + 120f
@@ -113,6 +111,51 @@ class ParticleSystem {
         }
     }
 
+    /**
+     * আসল বিজলি চমকানোর ইলেকট্রিক শকওয়েভ পার্টিকল (Electric Lightning Strike)
+     */
+    fun addLightningBurst(x: Float, y: Float) = synchronized(lock) {
+        val electricColors = listOf(
+            Color(0xFF67E8F9), Color(0xFFFDE047), Color(0xFFFFFFFF), Color(0xFF38BDF8)
+        )
+
+        // ইলেকট্রিক শকওয়েভ রিং
+        _particles.add(
+            Particle(
+                x = x,
+                y = y,
+                vx = 0f,
+                vy = 0f,
+                color = Color(0xFF67E8F9),
+                type = ParticleType.RING,
+                size = 18f,
+                alpha = 1.0f,
+                maxLife = 0.38f
+            )
+        )
+
+        // হাই-ভোল্টেজ বিজলি স্পার্ক
+        for (i in 0 until 16) {
+            val angle = Random.nextDouble(0.0, 2.0 * Math.PI)
+            val speed = Random.nextFloat() * 350f + 150f
+            _particles.add(
+                Particle(
+                    x = x,
+                    y = y,
+                    vx = (cos(angle) * speed).toFloat(),
+                    vy = (sin(angle) * speed).toFloat(),
+                    color = electricColors[i % electricColors.size],
+                    type = ParticleType.SPARKLE,
+                    size = Random.nextFloat() * 8f + 4f,
+                    alpha = 1.0f,
+                    rotation = Random.nextFloat() * 360f,
+                    rotSpeed = Random.nextFloat() * 600f - 300f,
+                    maxLife = 0.45f
+                )
+            )
+        }
+    }
+
     fun addPetRescueCelebration(x: Float, y: Float) = synchronized(lock) {
         val rainbowColors = listOf(
             Color(0xFFFFD700), Color(0xFFFF69B4), Color(0xFF00E5FF),
@@ -126,7 +169,7 @@ class ParticleSystem {
                     x = x,
                     y = y,
                     vx = (cos(angle) * speed).toFloat(),
-                    vy = (sin(angle) * speed).toFloat() - 150f, // upward burst
+                    vy = (sin(angle) * speed).toFloat() - 150f,
                     color = rainbowColors[i % rainbowColors.size],
                     type = ParticleType.CONFETTI,
                     size = Random.nextFloat() * 8f + 5f,
@@ -148,7 +191,7 @@ class ParticleSystem {
         petId: String?
     ) = synchronized(lock) {
         val vx = (Random.nextFloat() * 140f - 70f)
-        val vy = (Random.nextFloat() * -100f - 50f) // slight initial hop
+        val vy = (Random.nextFloat() * -100f - 50f)
         _fallingBubbles.add(
             FallingBubble(
                 x = startX,
@@ -175,7 +218,6 @@ class ParticleSystem {
     }
 
     fun update(dt: Float, screenHeight: Float, screenWidth: Float, onDropScored: ((Int) -> Unit)? = null) = synchronized(lock) {
-        // Update particles
         val pIter = _particles.iterator()
         while (pIter.hasNext()) {
             val p = pIter.next()
@@ -187,14 +229,13 @@ class ParticleSystem {
             p.x += p.vx * dt
             p.y += p.vy * dt
             p.rotation += p.rotSpeed * dt
-            p.vy += 450f * dt // gravity
+            p.vy += 450f * dt
             p.alpha = (1.0f - (p.life / p.maxLife)).coerceIn(0f, 1f)
             if (p.type == ParticleType.RING) {
                 p.size += 180f * dt
             }
         }
 
-        // Update falling bubbles
         val gravity = 1600f
         val bottomY = screenHeight - 60f
         val fIter = _fallingBubbles.iterator()
@@ -204,7 +245,6 @@ class ParticleSystem {
             fb.x += fb.vx * dt
             fb.y += fb.vy * dt
 
-            // Wall bounce
             if (fb.x - fb.radius < 0) {
                 fb.x = fb.radius
                 fb.vx = -fb.vx * 0.7f
@@ -213,7 +253,6 @@ class ParticleSystem {
                 fb.vx = -fb.vx * 0.7f
             }
 
-            // Bottom pop & bucket score: pop cleanly into sparkles and points
             if (fb.y >= bottomY) {
                 val bucketScore = when ((fb.x / (screenWidth / 5f)).toInt().coerceIn(0, 4)) {
                     0 -> 150
@@ -224,7 +263,7 @@ class ParticleSystem {
                 }
                 onDropScored?.invoke(bucketScore)
                 _scorePopups.add(ScorePopup(fb.x, fb.y - 30f, "+$bucketScore", Color(0xFFFFD700)))
-                // Pop burst
+
                 val baseColor = fb.color.primaryColor
                 val highlight = fb.color.highlightColor
                 _particles.add(
@@ -261,7 +300,6 @@ class ParticleSystem {
             }
         }
 
-        // Update score popups
         val sIter = _scorePopups.iterator()
         while (sIter.hasNext()) {
             val s = sIter.next()

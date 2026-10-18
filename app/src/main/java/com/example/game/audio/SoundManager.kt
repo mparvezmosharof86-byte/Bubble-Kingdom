@@ -19,7 +19,6 @@ import kotlin.math.PI
 import kotlin.math.sin
 
 class SoundManager(private val context: Context) {
-    // Safe coroutine handler to prevent audio failures from ever crashing the app
     private val coroutineExceptionHandler = CoroutineExceptionHandler { _, _ -> }
     private val scope = CoroutineScope(Dispatchers.Default + coroutineExceptionHandler)
 
@@ -56,9 +55,6 @@ class SoundManager(private val context: Context) {
         } catch (_: Throwable) {}
     }
 
-    /**
-     * Synthesizes and plays a bubble pop sound with pitch tailored to the bubble color
-     */
     fun playBubblePop(color: BubbleColor) {
         if (sfxVolume <= 0.01f) return
         playHaptic(20, 100)
@@ -134,6 +130,19 @@ class SoundManager(private val context: Context) {
         }
     }
 
+    /**
+     * আসল বিজলি চমকানোর ইলেকট্রিক থান্ডার সাউন্ড (Electric Lightning Zap Sound)
+     */
+    fun playLightningZap() {
+        if (sfxVolume <= 0.01f) return
+        playHaptic(75, 245)
+        scope.launch {
+            try {
+                playToneSweep(1500f, 240f, durationMs = 200, volume = sfxVolume)
+            } catch (_: Throwable) {}
+        }
+    }
+
     fun playVictoryFanfare() {
         if (sfxVolume <= 0.01f) return
         scope.launch {
@@ -160,9 +169,6 @@ class SoundManager(private val context: Context) {
         }
     }
 
-    /**
-     * Starts continuous soothing fantasy ambient melody loop with total crash immunity
-     */
     fun startBackgroundMusic() {
         if (musicJob?.isActive == true) return
 
@@ -240,9 +246,7 @@ class SoundManager(private val context: Context) {
                     track.stop()
                     track.release()
                 } catch (_: Throwable) {}
-            } catch (_: Throwable) {
-                // Audio unavailable or buffer error on this environment, safely ignore
-            }
+            } catch (_: Throwable) {}
         }
     }
 

@@ -43,7 +43,7 @@ enum class GameScreen {
     DAILY_REWARDS,
     LUCKY_SPIN,
     SETTINGS,
-    EVENTS // নতুন ইভেন্ট স্ক্রিন
+    EVENTS
 }
 
 enum class PlayState {
@@ -374,6 +374,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun updatePhysics(dt: Float) {
+        val state = _gameplayState.value
         val screenWidth = 720f
         val screenHeight = 1280f
         val bubbleRadius = 45f
@@ -391,6 +392,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         proj.x += proj.vx * dt
         proj.y += proj.vy * dt
 
+        // Left / Right Wall Bounce
         if (proj.x - bubbleRadius <= 0) {
             proj.x = bubbleRadius
             proj.vx = -proj.vx
@@ -401,6 +403,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             soundManager.playWallBounce()
         }
 
+        // 1. FIREBALL STRAIGHT PIERCE: রাস্তার সব বাবল ভস্মীভূত করে স্ক্রিনের বাইরে চলে যাবে
         if (proj.boosterType == BoosterType.FIREBALL) {
             for (r in 0 until hexGrid.maxRows) {
                 for (c in 0 until hexGrid.getColsForRow(r)) {
@@ -408,22 +411,43 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     if (b != null) {
                         val (cx, cy) = hexGrid.getCenter(r, c, bubbleRadius, screenWidth)
                         val distSq = (proj.x - cx) * (proj.x - cx) + (proj.y - cy) * (proj.y - cy)
-                        if (distSq <= (bubbleRadius * 2.1f) * (bubbleRadius * 2.1f)) {
+                        if (distSq <= (bubbleRadius * 2.2f) * (bubbleRadius * 2.2f)) {
                             hexGrid.setBubble(r, c, null)
                             particleSystem.addPopBurst(cx, cy, b.color)
                             soundManager.playBubblePop(b.color)
                             addScore(150)
+
+                            if (b.type == BubbleType.PET && b.petId != null) {
+                                particleSystem.addPetRescueCelebration(cx, cy)
+                                soundManager.playPetRescueChime()
+                                voiceManager.onPetRescued()
+                                val updated = _gameplayState.value.rescuedPetsInLevel.toMutableList()
+                                updated.add(b.petId)
+                                _gameplayState.update { it.copy(rescuedPetsInLevel = updated) }
+                            }
                         }
                     }
                 }
             }
+
+            particleSystem.addPopBurst(proj.x, proj.y, BubbleColor.ORANGE)
+
+            // ফায়ারবল স্ক্রিনের ওপরে চলে গেলে কখনোই সিলিংয়ে আটকাবে না (DO NOT ATTACH!)
+            if (proj.y <= 0f) {
+                currentProjectile = null
+                resolveFireballExit(bubbleRadius, screenWidth)
+                return
+            }
+            return
         }
 
+        // Ceiling collision (for regular bubbles)
         if (proj.y <= bubbleRadius) {
             attachAndResolve(proj, bubbleRadius, screenWidth)
             return
         }
 
+        // Collision with existing bubbles
         val collisionDistSq = (1.82f * bubbleRadius) * (1.82f * bubbleRadius)
         for (r in 0 until hexGrid.maxRows) {
             for (c in 0 until hexGrid.getColsForRow(r)) {
@@ -438,6 +462,42 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+    }
+
+    /**
+     * ফায়ারবল বের হয়ে যাওয়ার পর বিচ্ছিন্ন বাবলগুলো ড্রপ করা এবং পরবর্তী শট রেডি করা
+     */
+    private fun resolveFireballExit(bubbleRadius: Float, screenWidth: Float) {
+        _gameplayState.update { it.copy(playState = PlayState.RESOLVING) }
+
+        val detached = hexGrid.findDetachedBubbles()
+        val petsRescuedThisTurn = mutableListOf<String>()
+
+        if (detached.isNotEmpty()) {
+            if (detached.size >= 4) {
+                voiceManager.onBigDrop()
+            }
+            for ((dCoord, dBubble) in detached) {
+                val (dx, dy) = hexGrid.getCenter(dCoord.row, dCoord.col, bubbleRadius, screenWidth)
+                hexGrid.setBubble(dCoord.row, dCoord.col, null)
+                particleSystem.addFallingBubble(dx, dy, bubbleRadius, dBubble.color, dBubble.type, dBubble.petId)
+
+                if (dBubble.type == BubbleType.PET && dBubble.petId != null) {
+                    petsRescuedThisTurn.add(dBubble.petId)
+                    particleSystem.addPetRescueCelebration(dx, dy)
+                    soundManager.playPetRescueChime()
+                    voiceManager.onPetRescued()
+                }
+            }
+        }
+
+        if (petsRescuedThisTurn.isNotEmpty()) {
+            val updated = _gameplayState.value.rescuedPetsInLevel.toMutableList()
+            updated.addAll(petsRescuedThisTurn)
+            _gameplayState.update { it.copy(rescuedPetsInLevel = updated) }
+        }
+
+        checkEndConditions()
     }
 
     private fun attachAndResolve(proj: Projectile, bubbleRadius: Float, screenWidth: Float) {
@@ -482,12 +542,34 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 isMatchSuccessful = true
                 soundManager.playBombExplosion()
             }
+            // 2. LIGHTNING BALL: যে জায়গায় লাগবে সেই স্পটের ৪ থেকে ৫টি বাবল ধ্বংস করবে
             BoosterType.LIGHTNING_BUBBLE -> {
-                for (c in 0 until hexGrid.getColsForRow(hitRow)) {
-                    matchedCoords.add(GridCoord(hitRow, c))
+                val lightningTargets = mutableSetOf<GridCoord>()
+                lightningTargets.add(GridCoord(hitRow, hitCol))
+
+                val neighbors = hexGrid.getNeighbors(hitRow, hitCol).filter {
+                    hexGrid.getBubble(it.row, it.col) != null
+                }.shuffled()
+
+                for (nb in neighbors) {
+                    if (lightningTargets.size >= 5) break
+                    lightningTargets.add(nb)
                 }
+
+                if (lightningTargets.size < 4) {
+                    for (nb in neighbors) {
+                        for (nb2 in hexGrid.getNeighbors(nb.row, nb.col)) {
+                            if (lightningTargets.size >= 5) break
+                            if (hexGrid.getBubble(nb2.row, nb2.col) != null) {
+                                lightningTargets.add(nb2)
+                            }
+                        }
+                    }
+                }
+
+                matchedCoords = lightningTargets
                 isMatchSuccessful = true
-                soundManager.playBombExplosion()
+                soundManager.playLightningZap()
             }
             else -> {
                 val connected = hexGrid.findConnectedMatches(hitRow, hitCol)
@@ -506,7 +588,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 val b = hexGrid.getBubble(coord.row, coord.col)
                 if (b != null) {
                     val (cx, cy) = hexGrid.getCenter(coord.row, coord.col, bubbleRadius, screenWidth)
-                    particleSystem.addPopBurst(cx, cy, b.color)
+
+                    // লাইটনিং হলে বিশেষ ইলেকট্রিক শকওয়েভ বার্স্ট হবে
+                    if (booster == BoosterType.LIGHTNING_BUBBLE) {
+                        particleSystem.addLightningBurst(cx, cy)
+                    } else {
+                        particleSystem.addPopBurst(cx, cy, b.color)
+                    }
                     soundManager.playBubblePop(b.color)
 
                     if (b.type == BubbleType.PET && b.petId != null) {

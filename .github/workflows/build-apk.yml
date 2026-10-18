@@ -62,32 +62,44 @@ jobs:
           ICON_FILE=$(find . -iname "*app_icon*.png" -o -iname "*icon*.png" | head -n 1)
           if [ -n "$ICON_FILE" ]; then
             echo "Found custom app icon: $ICON_FILE"
-            python3 -c "
-          from PIL import Image
-          import os, shutil
+            cat << 'EOF' > Resize.java
+          import javax.imageio.ImageIO;
+          import java.awt.*;
+          import java.awt.image.BufferedImage;
+          import java.io.File;
 
-          img = Image.open('$ICON_FILE').convert('RGBA')
-          sizes = {
-              'mipmap-mdpi': 48,
-              'mipmap-hdpi': 72,
-              'mipmap-xhdpi': 96,
-              'mipmap-xxhdpi': 144,
-              'mipmap-xxxhdpi': 192
+          public class Resize {
+              public static void main(String[] args) throws Exception {
+                  File src = new File(args[0]);
+                  File resBase = new File(args[1]);
+                  BufferedImage img = ImageIO.read(src);
+
+                  int[] sizes = {48, 72, 96, 144, 192};
+                  String[] folders = {"mipmap-mdpi", "mipmap-hdpi", "mipmap-xhdpi", "mipmap-xxhdpi", "mipmap-xxxhdpi"};
+
+                  for (int i = 0; i < sizes.length; i++) {
+                      int sz = sizes[i];
+                      File dir = new File(resBase, folders[i]);
+                      dir.mkdirs();
+
+                      BufferedImage resized = new BufferedImage(sz, sz, BufferedImage.TYPE_INT_ARGB);
+                      Graphics2D g = resized.createGraphics();
+                      g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+                      g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                      g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                      g.drawImage(img, 0, 0, sz, sz, null);
+                      g.dispose();
+
+                      ImageIO.write(resized, "png", new File(dir, "ic_launcher.png"));
+                      ImageIO.write(resized, "png", new File(dir, "ic_launcher_round.png"));
+                  }
+                  System.out.println("3D App Icons generated successfully for all Android densities!");
+              }
           }
-          res_base = os.path.join('$PROJECT_DIR', 'app', 'src', 'main', 'res')
-          for folder, sz in sizes.items():
-              target_dir = os.path.join(res_base, folder)
-              os.makedirs(target_dir, exist_ok=True)
-              r = img.resize((sz, sz), Image.Resampling.LANCZOS)
-              r.save(os.path.join(target_dir, 'ic_launcher.png'))
-              r.save(os.path.join(target_dir, 'ic_launcher_round.png'))
-
-          # Remove legacy XML template so custom 3D PNG displays everywhere
-          anydpi_dir = os.path.join(res_base, 'mipmap-anydpi-v26')
-          if os.path.exists(anydpi_dir):
-              shutil.rmtree(anydpi_dir)
-          print('3D App Icons generated successfully for all Android densities!')
-          "
+          EOF
+            java Resize.java "$ICON_FILE" "$PROJECT_DIR/app/src/main/res"
+            rm -f Resize.java
+            rm -rf "$PROJECT_DIR/app/src/main/res/mipmap-anydpi-v26"
           else
             echo "No custom icon found, skipping."
           fi

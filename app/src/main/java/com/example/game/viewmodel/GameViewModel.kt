@@ -403,7 +403,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             soundManager.playWallBounce()
         }
 
-        // 1. FIREBALL STRAIGHT PIERCE: পথের সব বাবল ভস্মীভূত করে স্ক্রিনের বাইরে চলে যাবে
+        // 1. FIREBALL STRAIGHT PIERCE: পথের সব বাবল ধ্বংস করে স্ক্রিনের ওপরে সোজা উড়ে চলে যাবে
         if (proj.boosterType == BoosterType.FIREBALL) {
             for (r in 0 until hexGrid.maxRows) {
                 for (c in 0 until hexGrid.getColsForRow(r)) {
@@ -432,7 +432,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
             particleSystem.addPopBurst(proj.x, proj.y, BubbleColor.ORANGE)
 
-            // ফায়ারবল স্ক্রিনের ওপরে চলে গেলে কখনোই আটকাবে না
+            // ফায়ারবল সিলিংয়ে কখনোই আটকাবে না
             if (proj.y <= 0f) {
                 currentProjectile = null
                 resolveFireballExit(bubbleRadius, screenWidth)
@@ -441,7 +441,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        // Ceiling collision
+        // Ceiling collision (for regular bubbles)
         if (proj.y <= bubbleRadius) {
             attachAndResolve(proj, bubbleRadius, screenWidth)
             return
@@ -539,7 +539,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 isMatchSuccessful = true
                 soundManager.playBombExplosion()
             }
-            // 2. LIGHTNING BALL: ৪ থেকে ৫টি বাবল ধ্বংস করবে
+            // 2. LIGHTNING BALL: আঘাতপ্রাপ্ত স্থানে তীব্র বিজলি চমকে ৪-৫টি বাবল ধ্বংস করবে
             BoosterType.LIGHTNING_BUBBLE -> {
                 val lightningTargets = mutableSetOf<GridCoord>()
                 lightningTargets.add(GridCoord(hitRow, hitCol))
@@ -772,7 +772,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * 24 Hours Free Royal Chest Claim
+     * ২৪ ঘণ্টার ফ্রি চেস্ট ক্লেইম
      */
     fun claimFreeChest() {
         val (success, newState) = repository.claimFreeChest()
@@ -781,6 +781,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             soundManager.playPetRescueChime()
             particleSystem.addScorePopup(360f, 400f, "+200 COINS!", androidx.compose.ui.graphics.Color(0xFFFFD700))
         }
+    }
+
+    /**
+     * ১৫টি ইভেন্ট মাইলস্টোন টাস্ক ক্লেইম
+     */
+    fun claimStarMilestone(milestoneId: Int, coins: Int, booster: BoosterType? = null) {
+        val updatedState = repository.claimStarMilestone(milestoneId, coins, booster)
+        _saveState.value = updatedState
+        soundManager.playVictoryFanfare()
+        voiceManager.speak("Milestone unlocked! Wonderful prize!", priority = true)
+        particleSystem.addScorePopup(360f, 400f, "+$coins COINS!", androidx.compose.ui.graphics.Color(0xFFFFD700))
     }
 
     fun claimDailyReward(): Boolean {

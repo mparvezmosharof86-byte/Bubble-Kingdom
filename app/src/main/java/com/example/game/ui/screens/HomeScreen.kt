@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -31,12 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -56,7 +50,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -97,7 +90,6 @@ fun HomeScreen(viewModel: GameViewModel) {
                 )
             )
             .statusBarsPadding()
-            .navigationBarsPadding()
             .testTag("home_screen")
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -151,7 +143,7 @@ fun HomeScreen(viewModel: GameViewModel) {
                 }
             }
 
-            // 2. MAIN BODY (Spaced evenly so Play button is lower down naturally)
+            // 2. MAIN BODY
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -163,7 +155,7 @@ fun HomeScreen(viewModel: GameViewModel) {
             ) {
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Kingdom Card
+                // Kingdom 3D Card
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -251,9 +243,9 @@ fun HomeScreen(viewModel: GameViewModel) {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(48.dp))
+                Spacer(modifier = Modifier.height(36.dp))
 
-                // Action Row (Brought lower down with ample balance)
+                // Left 3D Icons & Lowered Play Button
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -261,7 +253,6 @@ fun HomeScreen(viewModel: GameViewModel) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Left Side 3D Icons
                     Column(
                         verticalArrangement = Arrangement.spacedBy(14.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -279,7 +270,6 @@ fun HomeScreen(viewModel: GameViewModel) {
                         )
                     }
 
-                    // Lower Positioned 3D Arcade PLAY Button
                     ThreeDPlayButton(
                         levelNum = saveState.unlockedLevel,
                         onClick = { viewModel.startLevel(saveState.unlockedLevel) },
@@ -289,18 +279,8 @@ fun HomeScreen(viewModel: GameViewModel) {
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
             }
-
-            // 3. BOTTOM NAVIGATION BAR (Home Button perfectly aligned in the middle)
-            KingdomBottomNavBar(
-                currentScreen = GameScreen.HOME,
-                onHomeClick = { /* Already on Home */ },
-                onLevelsClick = { viewModel.navigateTo(GameScreen.WORLD_MAP) },
-                onEventsClick = { viewModel.navigateTo(GameScreen.EVENTS) },
-                onShopClick = { viewModel.navigateTo(GameScreen.SHOP) },
-                onSettingsClick = { viewModel.navigateTo(GameScreen.SETTINGS) }
-            )
         }
     }
 }
@@ -588,201 +568,5 @@ fun ThreeDPlayButton(
                 )
             }
         }
-    }
-}
-
-/**
- * পারফেক্ট অ্যালাইন্ড বটম বার (হোম বাটন বারের সাথে ব্যালেন্সড অবস্থায় থাকবে)
- */
-@Composable
-fun KingdomBottomNavBar(
-    currentScreen: GameScreen,
-    onHomeClick: () -> Unit,
-    onLevelsClick: () -> Unit,
-    onEventsClick: () -> Unit,
-    onShopClick: () -> Unit,
-    onSettingsClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(24.dp)
-            .background(Color(0xFF0B0F19).copy(alpha = 0.98f))
-            .border(
-                width = 2.dp,
-                brush = Brush.verticalGradient(
-                    listOf(Color(0xFF818CF8).copy(alpha = 0.6f), Color.Transparent)
-                ),
-                shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
-            )
-            .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
-            .padding(horizontal = 8.dp, vertical = 8.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // 1. LEVELS
-            NavTabItem(
-                label = "Levels",
-                icon = Icons.Default.Map,
-                isSelected = currentScreen == GameScreen.WORLD_MAP,
-                badgeColor = Color(0xFF3B82F6),
-                onClick = onLevelsClick
-            )
-
-            // 2. EVENTS
-            NavTabItem(
-                label = "Events",
-                icon = Icons.Default.EmojiEvents,
-                isSelected = currentScreen == GameScreen.EVENTS,
-                badgeColor = Color(0xFFEC4899),
-                onClick = onEventsClick
-            )
-
-            // 3. BALANCED GOLDEN HOME BUTTON IN THE MIDDLE (ন্যাচারাল উচ্চতায় বসানো হয়েছে)
-            BalancedGoldenHomeButton(
-                isSelected = currentScreen == GameScreen.HOME,
-                onClick = onHomeClick
-            )
-
-            // 4. BOOSTER SHOP
-            NavTabItem(
-                label = "Shop",
-                icon = Icons.Default.ShoppingBag,
-                isSelected = currentScreen == GameScreen.SHOP,
-                badgeColor = Color(0xFF8B5CF6),
-                onClick = onShopClick
-            )
-
-            // 5. SETTINGS
-            NavTabItem(
-                label = "Settings",
-                icon = Icons.Default.Settings,
-                isSelected = currentScreen == GameScreen.SETTINGS,
-                badgeColor = Color(0xFF64748B),
-                onClick = onSettingsClick
-            )
-        }
-    }
-}
-
-/**
- * ব্যালেন্সড ৩ডি গোল্ডেন হোম বাটন (অতিরিক্ত উপরে উঠবে না, বারের সাথে পারফেক্ট থাকবে)
- */
-@Composable
-fun BalancedGoldenHomeButton(
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null
-            ) { onClick() }
-    ) {
-        Box(
-            modifier = Modifier
-                .size(54.dp)
-                .shadow(8.dp, CircleShape)
-                .clip(CircleShape)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color(0xFFFFF9C4),
-                            Color(0xFFFDE047),
-                            Color(0xFFF59E0B),
-                            Color(0xFFB45309)
-                        )
-                    )
-                )
-                .border(
-                    width = 2.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(Color(0xFFFFFFFF), Color(0xFFFFD54F), Color(0xFF78350F))
-                    ),
-                    shape = CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Home,
-                contentDescription = "Home",
-                tint = Color(0xFF1E1B4B),
-                modifier = Modifier.size(28.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(2.dp))
-
-        Text(
-            text = "Home",
-            color = Color(0xFFFDE047),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Black
-        )
-    }
-}
-
-@Composable
-fun NavTabItem(
-    label: String,
-    icon: ImageVector,
-    isSelected: Boolean,
-    badgeColor: Color,
-    onClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(RoundedCornerShape(14.dp))
-            .clickable { onClick() }
-            .padding(horizontal = 4.dp, vertical = 2.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .shadow(if (isSelected) 6.dp else 2.dp, CircleShape)
-                .clip(CircleShape)
-                .background(
-                    if (isSelected) {
-                        Brush.radialGradient(
-                            listOf(Color(0xFFFDE047), Color(0xFFD97706))
-                        )
-                    } else {
-                        Brush.radialGradient(
-                            listOf(badgeColor.copy(alpha = 0.35f), Color(0xFF1E293B))
-                        )
-                    }
-                )
-                .border(
-                    width = if (isSelected) 2.dp else 1.dp,
-                    color = if (isSelected) Color.White else badgeColor.copy(alpha = 0.5f),
-                    shape = CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = if (isSelected) Color(0xFF1E1B4B) else Color.White,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(3.dp))
-
-        Text(
-            text = label,
-            color = if (isSelected) Color(0xFFFDE047) else Color.White.copy(alpha = 0.8f),
-            fontSize = 11.sp,
-            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium
-        )
     }
 }

@@ -65,8 +65,8 @@ fun HomeScreen(viewModel: GameViewModel) {
     val todayEpoch = System.currentTimeMillis() / (1000 * 60 * 60 * 24)
     val dailyGiftReady = todayEpoch > saveState.lastDailyClaimDay
 
-    // 1. হুইল অবিরাম ধীরে ধীরে ঘোরার অ্যানিমেশন
-    val infiniteTransition = rememberInfiniteTransition(label = "continuous_anim")
+    val infiniteTransition = rememberInfiniteTransition(label = "home_animations")
+
     val wheelRotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
@@ -77,7 +77,6 @@ fun HomeScreen(viewModel: GameViewModel) {
         label = "wheel_rotate"
     )
 
-    // 2. গিফট বক্স শুধুমাত্র লাল ডট থাকলে লাফালাফি (Hopping) করবে
     val giftBounceY by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = -12f,
@@ -88,7 +87,6 @@ fun HomeScreen(viewModel: GameViewModel) {
         label = "gift_hop"
     )
 
-    // লাল ডটের জন্য পালসিং অ্যানিমেশন
     val dotScale by infiniteTransition.animateFloat(
         initialValue = 0.9f,
         targetValue = 1.15f,
@@ -120,7 +118,6 @@ fun HomeScreen(viewModel: GameViewModel) {
                 .fillMaxSize()
                 .padding(bottom = 12.dp)
         ) {
-
             // 1. TOP BAR
             Row(
                 modifier = Modifier
@@ -179,8 +176,7 @@ fun HomeScreen(viewModel: GameViewModel) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-
-                // Kingdom Castle Card: সুন্দর কমপ্যাক্ট ও ওপরে উঠানো
+                // Castle Card
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(0.94f)
@@ -269,7 +265,7 @@ fun HomeScreen(viewModel: GameViewModel) {
                     }
                 }
 
-                // 3. বামপাশে ওপরে তোলা স্পিন ও গিফট আইকন (ঘূর্ণায়মান হুইল, WIN ব্যাজ ও লাফালাফি করা গিফট)
+                // 3. Side Icons (Wheel & Gift)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -282,7 +278,7 @@ fun HomeScreen(viewModel: GameViewModel) {
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // 1. LUCKY SPIN WITH ROTATING WHEEL & "WIN!" BADGE
+                        // Lucky Spin
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Box(contentAlignment = Alignment.Center) {
                                 CanvasLuckyWheel(
@@ -292,7 +288,6 @@ fun HomeScreen(viewModel: GameViewModel) {
                                     onClick = { viewModel.navigateTo(GameScreen.LUCKY_SPIN) }
                                 )
 
-                                // WIN! Floating Tag
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.TopCenter)
@@ -325,7 +320,7 @@ fun HomeScreen(viewModel: GameViewModel) {
                             )
                         }
 
-                        // 2. DAILY REWARD (শুধুমাত্র লাল ডট থাকলে উপরে-নিচে লাফালাফি করবে)
+                        // Daily Gift
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.offset(y = if (dailyGiftReady) giftBounceY.dp else 0.dp)
@@ -347,7 +342,7 @@ fun HomeScreen(viewModel: GameViewModel) {
                     }
                 }
 
-                // 4. PLAY LEVEL বাটন: একদম নিচে মাঝ বরাবর (Center Aligned)
+                // 4. Center-aligned 3D Play Button
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -368,7 +363,7 @@ fun HomeScreen(viewModel: GameViewModel) {
 }
 
 /**
- * ঘূর্ণায়মান ৩ডি লাকি হুইল
+ * 3D Lucky Wheel using Modifier.rotate
  */
 @Composable
 fun CanvasLuckyWheel(
@@ -386,7 +381,11 @@ fun CanvasLuckyWheel(
             ) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.size(52.dp)) {
+        Canvas(
+            modifier = Modifier
+                .size(52.dp)
+                .rotate(rotationDegrees)
+        ) {
             val center = Offset(size.width / 2f, size.height / 2f)
             val radius = size.width / 2f
 
@@ -421,19 +420,15 @@ fun CanvasLuckyWheel(
                 Color(0xFFEC4899)
             )
             val sweep = 360f / slices.size
-
-            // হুইলটি কন্টিনিউয়াস রোটেট করবে
-            androidx.compose.ui.graphics.drawscope.rotate(rotationDegrees, pivot = center) {
-                slices.forEachIndexed { i, c ->
-                    drawArc(
-                        color = c,
-                        startAngle = i * sweep,
-                        sweepAngle = sweep,
-                        useCenter = true,
-                        topLeft = Offset(center.x - innerR, center.y - innerR),
-                        size = Size(innerR * 2, innerR * 2)
-                    )
-                }
+            slices.forEachIndexed { i, c ->
+                drawArc(
+                    color = c,
+                    startAngle = i * sweep,
+                    sweepAngle = sweep,
+                    useCenter = true,
+                    topLeft = Offset(center.x - innerR, center.y - innerR),
+                    size = Size(innerR * 2, innerR * 2)
+                )
             }
 
             drawCircle(
@@ -446,8 +441,13 @@ fun CanvasLuckyWheel(
                 center = center
             )
             drawCircle(color = Color.White, radius = 3f, center = center)
+        }
 
-            // স্থায়ী টপ পয়েন্টার
+        Canvas(modifier = Modifier.size(52.dp)) {
+            val center = Offset(size.width / 2f, size.height / 2f)
+            val radius = size.width / 2f
+            val innerR = radius - 4.5f
+
             val pointer = Path().apply {
                 moveTo(center.x, center.y - innerR + 1f)
                 lineTo(center.x - 5f, center.y - innerR - 5f)
@@ -475,7 +475,7 @@ fun CanvasLuckyWheel(
 }
 
 /**
- * ৩ডি গিফট বক্স
+ * 3D Daily Gift Box
  */
 @Composable
 fun CanvasDailyGift(
@@ -569,7 +569,7 @@ fun CanvasDailyGift(
                     center = Offset(bowCenter.x + 7f, bowCenter.y - 4f),
                     radius = 9f
                 ),
-                topLeft = Offset(bowCenter.x, bowCenter.y - 9f),
+                topLeft = Offset(bowCenter.x - 14f, bowCenter.y - 9f),
                 size = Size(14f, 10f)
             )
             drawCircle(
@@ -599,6 +599,9 @@ fun CanvasDailyGift(
     }
 }
 
+/**
+ * 3D Play Button
+ */
 @Composable
 fun ThreeDPlayButton(
     levelNum: Int,
@@ -663,3 +666,4 @@ fun ThreeDPlayButton(
             }
         }
     }
+}

@@ -141,7 +141,7 @@ fun StarRatingBar(
 }
 
 /**
- * পারফেক্ট ৩ডি রয়্যাল বটম নেভিগেশন বার (সবগুলো প্রধান স্ক্রিনে স্থায়ীভাবে দৃশ্যমান থাকবে)
+ * পারফেক্ট ৩ডি রয়্যাল বটম নেভিগেশন বার
  */
 @Composable
 fun KingdomBottomNavBar(
@@ -172,7 +172,6 @@ fun KingdomBottomNavBar(
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. Levels (World Map)
             NavTabItem(
                 label = "Levels",
                 icon = Icons.Default.Map,
@@ -181,7 +180,6 @@ fun KingdomBottomNavBar(
                 onClick = onLevelsClick
             )
 
-            // 2. Events (Beside Levels)
             NavTabItem(
                 label = "Events",
                 icon = Icons.Default.EmojiEvents,
@@ -190,13 +188,11 @@ fun KingdomBottomNavBar(
                 onClick = onEventsClick
             )
 
-            // 3. HOME BUTTON IN THE MIDDLE (বড় ও ৩ডি গোল্ডেন)
             BalancedGoldenHomeButton(
                 isSelected = currentScreen == GameScreen.HOME,
                 onClick = onHomeClick
             )
 
-            // 4. Booster Shop
             NavTabItem(
                 label = "Shop",
                 icon = Icons.Default.ShoppingBag,
@@ -205,7 +201,6 @@ fun KingdomBottomNavBar(
                 onClick = onShopClick
             )
 
-            // 5. Settings
             NavTabItem(
                 label = "Settings",
                 icon = Icons.Default.Settings,
@@ -223,7 +218,6 @@ fun BalancedGoldenHomeButton(
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,

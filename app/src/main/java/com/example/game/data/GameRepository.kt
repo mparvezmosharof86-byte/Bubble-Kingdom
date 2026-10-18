@@ -23,7 +23,8 @@ data class GameSaveState(
     val dailyRewardStreak: Int = 0,
     val lastDailyClaimDay: Long = 0L,
     val lastLuckySpinDay: Long = 0L,
-    val lastChestClaimTimeMs: Long = 0L, // 24h Free Chest Timestamp
+    val lastChestClaimTimeMs: Long = 0L,
+    val claimedEventMilestones: Set<Int> = emptySet(), // ইভেন্টের ক্লেইম করা টাস্কসমূহ
     val completedAchievements: Set<String> = emptySet(),
     val musicVolume: Float = 0.6f,
     val sfxVolume: Float = 1.0f,
@@ -116,6 +117,24 @@ class GameRepository(context: Context) {
         val newState = cachedState.copy(boosterInventory = updated)
         persistState(newState)
         return true
+    }
+
+    fun claimStarMilestone(milestoneId: Int, rewardCoins: Int, booster: BoosterType? = null): GameSaveState {
+        val updatedMilestones = cachedState.claimedEventMilestones.toMutableSet()
+        updatedMilestones.add(milestoneId)
+
+        val updatedBoosters = cachedState.boosterInventory.toMutableMap()
+        if (booster != null) {
+            updatedBoosters[booster] = (updatedBoosters[booster] ?: 0) + 1
+        }
+
+        val newState = cachedState.copy(
+            playerCoins = cachedState.playerCoins + rewardCoins,
+            boosterInventory = updatedBoosters,
+            claimedEventMilestones = updatedMilestones
+        )
+        persistState(newState)
+        return newState
     }
 
     fun claimFreeChest(): Pair<Boolean, GameSaveState> {
@@ -239,6 +258,9 @@ class GameRepository(context: Context) {
             json.put("hapticsEnabled", state.hapticsEnabled)
             json.put("colorblindEnabled", state.colorblindEnabled)
 
+            val milestonesJson = org.json.JSONArray(state.claimedEventMilestones)
+            json.put("claimedEventMilestones", milestonesJson)
+
             val starsJson = JSONObject()
             state.levelStars.forEach { (k, v) -> starsJson.put(k.toString(), v) }
             json.put("levelStars", starsJson)
@@ -280,6 +302,14 @@ class GameRepository(context: Context) {
             val voiceVolume = json.optDouble("voiceVolume", 1.0).toFloat()
             val hapticsEnabled = json.optBoolean("hapticsEnabled", true)
             val colorblindEnabled = json.optBoolean("colorblindEnabled", false)
+
+            val claimedEventMilestones = mutableSetOf<Int>()
+            val milesArr = json.optJSONArray("claimedEventMilestones")
+            if (milesArr != null) {
+                for (i in 0 until milesArr.length()) {
+                    claimedEventMilestones.add(milesArr.getInt(i))
+                }
+            }
 
             val levelStars = mutableMapOf<Int, Int>()
             val starsObj = json.optJSONObject("levelStars")
@@ -335,6 +365,7 @@ class GameRepository(context: Context) {
                 lastDailyClaimDay = lastDailyClaimDay,
                 lastLuckySpinDay = lastLuckySpinDay,
                 lastChestClaimTimeMs = lastChestClaimTimeMs,
+                claimedEventMilestones = claimedEventMilestones,
                 completedAchievements = completedAchievements,
                 musicVolume = musicVolume,
                 sfxVolume = sfxVolume,

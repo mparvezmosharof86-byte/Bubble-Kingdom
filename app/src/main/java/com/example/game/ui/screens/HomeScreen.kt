@@ -72,7 +72,6 @@ fun HomeScreen(viewModel: GameViewModel) {
     val todayEpoch = System.currentTimeMillis() / (1000 * 60 * 60 * 24)
     val dailyGiftReady = todayEpoch > saveState.lastDailyClaimDay
 
-    // Pulsing alert animation for red notification dots
     val transition = rememberInfiniteTransition(label = "pulse_anim")
     val dotScale by transition.animateFloat(
         initialValue = 0.9f,
@@ -103,7 +102,7 @@ fun HomeScreen(viewModel: GameViewModel) {
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // 1. TOP BAR: 3D Glossy Currency & Star Rating
+            // 1. TOP BAR
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -116,7 +115,6 @@ fun HomeScreen(viewModel: GameViewModel) {
                     onClick = { viewModel.navigateTo(GameScreen.SHOP) }
                 )
 
-                // 3D Metallic Star Counter Pill
                 Box(
                     modifier = Modifier
                         .shadow(6.dp, RoundedCornerShape(20.dp))
@@ -153,18 +151,19 @@ fun HomeScreen(viewModel: GameViewModel) {
                 }
             }
 
-            // 2. MAIN CENTER BODY (3D Kingdom Castle & Action Zone)
+            // 2. MAIN BODY (Spaced evenly so Play button is lower down naturally)
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
-                // 3D Kingdom Master Card with Beveled Golden Rim
+                // Kingdom Card
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -191,7 +190,7 @@ fun HomeScreen(viewModel: GameViewModel) {
                             ),
                             RoundedCornerShape(32.dp)
                         )
-                        .padding(vertical = 22.dp, horizontal = 20.dp),
+                        .padding(vertical = 20.dp, horizontal = 20.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -203,9 +202,8 @@ fun HomeScreen(viewModel: GameViewModel) {
                             letterSpacing = 1.2.sp
                         )
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                        // 3D Mascot Sphere
                         Box(
                             modifier = Modifier
                                 .size(96.dp)
@@ -228,7 +226,6 @@ fun HomeScreen(viewModel: GameViewModel) {
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Level Progress Badge
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(14.dp))
@@ -254,15 +251,17 @@ fun HomeScreen(viewModel: GameViewModel) {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(26.dp))
+                Spacer(modifier = Modifier.height(48.dp))
 
-                // 3. ACTION ROW: Left Side 3D Icons (Wheel & Gift) + Big 3D Play Button
+                // Action Row (Brought lower down with ample balance)
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Left Column: Pure 3D Canvas Icons (NO EMOJI, NO ENCLOSING BUBBLES)
+                    // Left Side 3D Icons
                     Column(
                         verticalArrangement = Arrangement.spacedBy(14.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -280,20 +279,20 @@ fun HomeScreen(viewModel: GameViewModel) {
                         )
                     }
 
-                    // Right: Massive 3D Glossy Arcade PLAY Button
+                    // Lower Positioned 3D Arcade PLAY Button
                     ThreeDPlayButton(
                         levelNum = saveState.unlockedLevel,
                         onClick = { viewModel.startLevel(saveState.unlockedLevel) },
                         modifier = Modifier
                             .weight(1f)
-                            .height(78.dp)
+                            .height(82.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // 4. BOTTOM NAVIGATION BAR: Levels | Events | [ 🏠 HOME (BIG GOLDEN) ] | Shop | Settings
+            // 3. BOTTOM NAVIGATION BAR (Home Button perfectly aligned in the middle)
             KingdomBottomNavBar(
                 currentScreen = GameScreen.HOME,
                 onHomeClick = { /* Already on Home */ },
@@ -306,9 +305,6 @@ fun HomeScreen(viewModel: GameViewModel) {
     }
 }
 
-/**
- * PURE 3D VECTOR LUCKY WHEEL
- */
 @Composable
 fun CanvasLuckyWheel(
     hasNotification: Boolean,
@@ -407,9 +403,6 @@ fun CanvasLuckyWheel(
     }
 }
 
-/**
- * PURE 3D VECTOR DAILY GIFT BOX
- */
 @Composable
 fun CanvasDailyGift(
     hasNotification: Boolean,
@@ -532,9 +525,6 @@ fun CanvasDailyGift(
     }
 }
 
-/**
- * 3D CANDY ARCADE PUSH BUTTON
- */
 @Composable
 fun ThreeDPlayButton(
     levelNum: Int,
@@ -563,7 +553,7 @@ fun ThreeDPlayButton(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(68.dp)
+                .height(72.dp)
                 .shadow(if (isPressed) 2.dp else 8.dp, RoundedCornerShape(24.dp))
                 .clip(RoundedCornerShape(24.dp))
                 .background(
@@ -586,7 +576,7 @@ fun ThreeDPlayButton(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(34.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
@@ -602,7 +592,7 @@ fun ThreeDPlayButton(
 }
 
 /**
- * 3D BOTTOM NAVIGATION BAR: Levels | Events | [ 🏠 HOME (BIG GOLDEN CENTER) ] | Shop | Settings
+ * পারফেক্ট অ্যালাইন্ড বটম বার (হোম বাটন বারের সাথে ব্যালেন্সড অবস্থায় থাকবে)
  */
 @Composable
 fun KingdomBottomNavBar(
@@ -626,14 +616,14 @@ fun KingdomBottomNavBar(
                 shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
             )
             .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
-            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .padding(horizontal = 8.dp, vertical = 8.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. LEVELS (World Map)
+            // 1. LEVELS
             NavTabItem(
                 label = "Levels",
                 icon = Icons.Default.Map,
@@ -642,7 +632,7 @@ fun KingdomBottomNavBar(
                 onClick = onLevelsClick
             )
 
-            // 2. EVENTS (Right beside Levels)
+            // 2. EVENTS
             NavTabItem(
                 label = "Events",
                 icon = Icons.Default.EmojiEvents,
@@ -651,8 +641,8 @@ fun KingdomBottomNavBar(
                 onClick = onEventsClick
             )
 
-            // 3. HOME BUTTON IN THE MIDDLE (BIGGER, ELEVATED & 3D GOLDEN)
-            CenterGoldenHomeButton(
+            // 3. BALANCED GOLDEN HOME BUTTON IN THE MIDDLE (ন্যাচারাল উচ্চতায় বসানো হয়েছে)
+            BalancedGoldenHomeButton(
                 isSelected = currentScreen == GameScreen.HOME,
                 onClick = onHomeClick
             )
@@ -679,10 +669,10 @@ fun KingdomBottomNavBar(
 }
 
 /**
- * ELEVATED 3D GOLDEN CENTER HOME BUTTON
+ * ব্যালেন্সড ৩ডি গোল্ডেন হোম বাটন (অতিরিক্ত উপরে উঠবে না, বারের সাথে পারফেক্ট থাকবে)
  */
 @Composable
-fun CenterGoldenHomeButton(
+fun BalancedGoldenHomeButton(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
@@ -692,7 +682,6 @@ fun CenterGoldenHomeButton(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .offset(y = (-14).dp) // Elevated 3D Floating Look above bottom bar!
             .clickable(
                 interactionSource = interactionSource,
                 indication = null
@@ -700,21 +689,21 @@ fun CenterGoldenHomeButton(
     ) {
         Box(
             modifier = Modifier
-                .size(62.dp)
-                .shadow(14.dp, CircleShape)
+                .size(54.dp)
+                .shadow(8.dp, CircleShape)
                 .clip(CircleShape)
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xFFFFF9C4), // Bright highlight
+                            Color(0xFFFFF9C4),
                             Color(0xFFFDE047),
                             Color(0xFFF59E0B),
-                            Color(0xFFB45309)  // Deep 3D gold shadow
+                            Color(0xFFB45309)
                         )
                     )
                 )
                 .border(
-                    width = 2.5.dp,
+                    width = 2.dp,
                     brush = Brush.verticalGradient(
                         listOf(Color(0xFFFFFFFF), Color(0xFFFFD54F), Color(0xFF78350F))
                     ),
@@ -725,8 +714,8 @@ fun CenterGoldenHomeButton(
             Icon(
                 imageVector = Icons.Default.Home,
                 contentDescription = "Home",
-                tint = Color(0xFF1E1B4B), // Bold deep royal navy contrast
-                modifier = Modifier.size(32.dp)
+                tint = Color(0xFF1E1B4B),
+                modifier = Modifier.size(28.dp)
             )
         }
 
@@ -735,7 +724,7 @@ fun CenterGoldenHomeButton(
         Text(
             text = "Home",
             color = Color(0xFFFDE047),
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Black
         )
     }
@@ -754,7 +743,7 @@ fun NavTabItem(
         modifier = Modifier
             .clip(RoundedCornerShape(14.dp))
             .clickable { onClick() }
-            .padding(horizontal = 4.dp, vertical = 4.dp)
+            .padding(horizontal = 4.dp, vertical = 2.dp)
     ) {
         Box(
             modifier = Modifier

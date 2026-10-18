@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -157,15 +158,17 @@ fun LuckySpinScreen(viewModel: GameViewModel) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Wheel Container with Canvas
+            // Wheel Container with Canvas + 3D Super Arrow
             Box(
                 modifier = Modifier
-                    .size(330.dp)
-                    .shadow(16.dp, CircleShape),
+                    .size(340.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // Rotating Wheel Canvas
-                Canvas(modifier = Modifier.fillMaxSize()) {
+                Canvas(
+                    modifier = Modifier
+                        .size(320.dp)
+                        .shadow(16.dp, CircleShape)
+                ) {
                     val w = size.width
                     val h = size.height
                     val center = Offset(w / 2f, h / 2f)
@@ -173,7 +176,6 @@ fun LuckySpinScreen(viewModel: GameViewModel) {
                     val sliceAngle = 360f / LUCKY_SPIN_REWARDS.size
 
                     rotate(rotationAnim.value, pivot = center) {
-                        // 1. Draw outer rim with metallic gold border
                         drawCircle(
                             brush = Brush.radialGradient(
                                 listOf(Color(0xFFFDE047), Color(0xFFD97706), Color(0xFF78350F)),
@@ -184,7 +186,6 @@ fun LuckySpinScreen(viewModel: GameViewModel) {
                             center = center
                         )
 
-                        // 2. Draw 8 Slices
                         for (i in LUCKY_SPIN_REWARDS.indices) {
                             val reward = LUCKY_SPIN_REWARDS[i]
                             val startAngle = i * sliceAngle - (sliceAngle / 2f)
@@ -198,7 +199,6 @@ fun LuckySpinScreen(viewModel: GameViewModel) {
                                 size = Size(radius * 2, radius * 2)
                             )
 
-                            // Inner slice divider line
                             val lineAngleRad = Math.toRadians(startAngle.toDouble())
                             val endX = center.x + (cos(lineAngleRad) * radius).toFloat()
                             val endY = center.y + (sin(lineAngleRad) * radius).toFloat()
@@ -210,7 +210,6 @@ fun LuckySpinScreen(viewModel: GameViewModel) {
                             )
                         }
 
-                        // 3. Draw Reward Labels & Emojis on each slice
                         for (i in LUCKY_SPIN_REWARDS.indices) {
                             val reward = LUCKY_SPIN_REWARDS[i]
                             val midAngle = i * sliceAngle
@@ -240,7 +239,6 @@ fun LuckySpinScreen(viewModel: GameViewModel) {
                             } catch (_: Throwable) {}
                         }
 
-                        // Outer Studs / Light bulbs
                         val numStuds = 16
                         for (j in 0 until numStuds) {
                             val studAngleRad = Math.toRadians((j * 360.0 / numStuds))
@@ -254,7 +252,6 @@ fun LuckySpinScreen(viewModel: GameViewModel) {
                         }
                     }
 
-                    // 4. Draw Center Golden Hub (Fixed / unrotated)
                     drawCircle(
                         brush = Brush.radialGradient(
                             listOf(Color(0xFFFDE047), Color(0xFFB45309)),
@@ -270,16 +267,6 @@ fun LuckySpinScreen(viewModel: GameViewModel) {
                         center = center,
                         style = Stroke(width = 3f)
                     )
-
-                    // 5. Golden Pointer Flapper at Top
-                    val pointer = Path().apply {
-                        moveTo(center.x, 2f)
-                        lineTo(center.x - 16f, -18f)
-                        lineTo(center.x + 16f, -18f)
-                        close()
-                    }
-                    drawPath(pointer, Color(0xFFEF4444))
-                    drawPath(pointer, Color.White, style = Stroke(width = 2.5f))
                 }
 
                 // Center Spin Tap Button
@@ -299,7 +286,6 @@ fun LuckySpinScreen(viewModel: GameViewModel) {
                                     winningReward = LUCKY_SPIN_REWARDS[winningIndex]
 
                                     val sliceAngle = 360f / LUCKY_SPIN_REWARDS.size
-                                    // Pointer is at -90° (top)
                                     val targetSliceAngle = (LUCKY_SPIN_REWARDS.size - winningIndex) * sliceAngle - 90f
                                     val fullRotations = 360f * 6
                                     val targetTotalRotation = rotationAnim.value + fullRotations + targetSliceAngle
@@ -335,11 +321,18 @@ fun LuckySpinScreen(viewModel: GameViewModel) {
                         )
                     }
                 }
+
+                // বিশাল ও চোখ ধাঁধানো 3D রুবি-গোল্ড অ্যারো পয়েন্টার (Top Center Overlap)
+                ThreeDWheelPointer(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .offset(y = (-6).dp)
+                        .size(width = 44.dp, height = 54.dp)
+                )
             }
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Spin Action Button
             val spinButtonText = when {
                 isSpinning -> "SPINNING..."
                 freeSpinAvailable -> "FREE SPIN! 🎁"
@@ -400,7 +393,6 @@ fun LuckySpinScreen(viewModel: GameViewModel) {
             )
         }
 
-        // Win Celebration Dialog
         AnimatedVisibility(
             visible = showWinDialog,
             enter = fadeIn(),
@@ -464,7 +456,7 @@ fun LuckySpinScreen(viewModel: GameViewModel) {
                         GlossyButton(
                             text = "CLAIM REWARD",
                             onClick = { showWinDialog = false },
-                            colors = listOf(Color(0xFF10B981), Color(0xFF047857)),
+                            colors = listOf(Color(0xFF10B981), Color(0xFF059669)),
                             modifier = Modifier.fillMaxWidth(),
                             testTag = "claim_spin_reward_btn"
                         )
@@ -472,5 +464,101 @@ fun LuckySpinScreen(viewModel: GameViewModel) {
                 }
             }
         }
+    }
+}
+
+/**
+ * 3D বিশাল রয়্যাল রুবি অ্যারো পয়েন্টার (Faceted 3D Arrow)
+ */
+@Composable
+fun ThreeDWheelPointer(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+
+        // 1. Drop Shadow
+        val shadowPath = Path().apply {
+            moveTo(w * 0.15f, 2f)
+            lineTo(w * 0.85f, 2f)
+            lineTo(w * 0.85f, h * 0.52f)
+            lineTo(w * 0.5f, h + 2f)
+            lineTo(w * 0.15f, h * 0.52f)
+            close()
+        }
+        drawPath(
+            shadowPath,
+            color = Color.Black.copy(alpha = 0.5f)
+        )
+
+        // 2. 3D Outer Gold Bevel Rim
+        val goldPath = Path().apply {
+            moveTo(w * 0.15f, 0f)
+            lineTo(w * 0.85f, 0f)
+            lineTo(w * 0.85f, h * 0.5f)
+            lineTo(w * 0.5f, h)
+            lineTo(w * 0.15f, h * 0.5f)
+            close()
+        }
+        drawPath(
+            goldPath,
+            brush = Brush.verticalGradient(
+                listOf(Color(0xFFFFF9C4), Color(0xFFFFD54F), Color(0xFFF57F17), Color(0xFF78350F))
+            )
+        )
+
+        // 3. Faceted Ruby Arrow Body: Left facet (Brighter Ruby)
+        val leftFacet = Path().apply {
+            moveTo(w * 0.22f, 4f)
+            lineTo(w * 0.5f, 4f)
+            lineTo(w * 0.5f, h - 5f)
+            lineTo(w * 0.22f, h * 0.48f)
+            close()
+        }
+        drawPath(
+            leftFacet,
+            brush = Brush.verticalGradient(
+                listOf(Color(0xFFFF5252), Color(0xFFE53935))
+            )
+        )
+
+        // Right facet (Deeper Crimson Shade)
+        val rightFacet = Path().apply {
+            moveTo(w * 0.5f, 4f)
+            lineTo(w * 0.78f, 4f)
+            lineTo(w * 0.78f, h * 0.48f)
+            lineTo(w * 0.5f, h - 5f)
+            close()
+        }
+        drawPath(
+            rightFacet,
+            brush = Brush.verticalGradient(
+                listOf(Color(0xFFC62828), Color(0xFF880E4F))
+            )
+        )
+
+        // 4. White Center Specular Ridge Line
+        drawLine(
+            color = Color.White.copy(alpha = 0.85f),
+            start = Offset(w * 0.5f, 4f),
+            end = Offset(w * 0.5f, h - 6f),
+            strokeWidth = 2.5f
+        )
+
+        // 5. Golden Top Pivot Bolt
+        drawCircle(
+            brush = Brush.radialGradient(
+                listOf(Color(0xFFFFFFFF), Color(0xFFFFD54F), Color(0xFFF57F17)),
+                center = Offset(w * 0.5f, 10f),
+                radius = 8f
+            ),
+            radius = 8f,
+            center = Offset(w * 0.5f, 10f)
+        )
+        drawCircle(
+            color = Color(0xFF78350F),
+            radius = 8f,
+            center = Offset(w * 0.5f, 10f),
+            style = Stroke(width = 1.5f)
+        )
     }
 }

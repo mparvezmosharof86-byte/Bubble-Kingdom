@@ -1,6 +1,7 @@
 package com.example.game.ui.screens
 
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -39,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
@@ -63,8 +65,31 @@ fun HomeScreen(viewModel: GameViewModel) {
     val todayEpoch = System.currentTimeMillis() / (1000 * 60 * 60 * 24)
     val dailyGiftReady = todayEpoch > saveState.lastDailyClaimDay
 
-    val transition = rememberInfiniteTransition(label = "pulse_anim")
-    val dotScale by transition.animateFloat(
+    // 1. হুইল অবিরাম ধীরে ধীরে ঘোরার অ্যানিমেশন
+    val infiniteTransition = rememberInfiniteTransition(label = "continuous_anim")
+    val wheelRotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(7000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "wheel_rotate"
+    )
+
+    // 2. গিফট বক্স শুধুমাত্র লাল ডট থাকলে লাফালাফি (Hopping) করবে
+    val giftBounceY by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = -12f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(550, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "gift_hop"
+    )
+
+    // লাল ডটের জন্য পালসিং অ্যানিমেশন
+    val dotScale by infiniteTransition.animateFloat(
         initialValue = 0.9f,
         targetValue = 1.15f,
         animationSpec = infiniteRepeatable(
@@ -145,7 +170,7 @@ fun HomeScreen(viewModel: GameViewModel) {
                 }
             }
 
-            // 2. MAIN CENTER AREA (কমপ্যাক্ট ক্যাসল ও সেন্ট্রালাইজড বাটন)
+            // 2. MAIN CENTER AREA
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -155,7 +180,7 @@ fun HomeScreen(viewModel: GameViewModel) {
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
 
-                // Kingdom Card: ছোট, স্লিম এবং ওপরে উঠানো
+                // Kingdom Castle Card: সুন্দর কমপ্যাক্ট ও ওপরে উঠানো
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(0.94f)
@@ -197,7 +222,6 @@ fun HomeScreen(viewModel: GameViewModel) {
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // কমপ্যাক্ট ৩ডি মাসকট
                         Box(
                             modifier = Modifier
                                 .size(74.dp)
@@ -245,30 +269,81 @@ fun HomeScreen(viewModel: GameViewModel) {
                     }
                 }
 
-                // 3. বামপাশে স্পিন ও গিফট আইকন (সেম অবস্থান)
+                // 3. বামপাশে ওপরে তোলা স্পিন ও গিফট আইকন (ঘূর্ণায়মান হুইল, WIN ব্যাজ ও লাফালাফি করা গিফট)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 10.dp)
+                        .padding(top = 4.dp)
                 ) {
                     Column(
                         modifier = Modifier
                             .align(Alignment.CenterStart)
-                            .padding(start = 6.dp),
+                            .padding(start = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        CanvasLuckyWheel(
-                            hasNotification = freeSpinReady,
-                            dotScale = dotScale,
-                            onClick = { viewModel.navigateTo(GameScreen.LUCKY_SPIN) }
-                        )
+                        // 1. LUCKY SPIN WITH ROTATING WHEEL & "WIN!" BADGE
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(contentAlignment = Alignment.Center) {
+                                CanvasLuckyWheel(
+                                    rotationDegrees = wheelRotation,
+                                    hasNotification = freeSpinReady,
+                                    dotScale = dotScale,
+                                    onClick = { viewModel.navigateTo(GameScreen.LUCKY_SPIN) }
+                                )
 
-                        CanvasDailyGift(
-                            hasNotification = dailyGiftReady,
-                            dotScale = dotScale,
-                            onClick = { viewModel.navigateTo(GameScreen.DAILY_REWARDS) }
-                        )
+                                // WIN! Floating Tag
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopCenter)
+                                        .offset(y = (-8).dp)
+                                        .shadow(4.dp, RoundedCornerShape(8.dp))
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(
+                                            Brush.horizontalGradient(
+                                                listOf(Color(0xFFFDE047), Color(0xFFF59E0B))
+                                            )
+                                        )
+                                        .border(1.dp, Color.White, RoundedCornerShape(8.dp))
+                                        .padding(horizontal = 6.dp, vertical = 1.dp)
+                                ) {
+                                    Text(
+                                        text = "WIN!",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color(0xFF1E1B4B)
+                                    )
+                                }
+                            }
+
+                            Text(
+                                text = "Lucky Spin",
+                                color = Color(0xFFFEF3C7),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
+
+                        // 2. DAILY REWARD (শুধুমাত্র লাল ডট থাকলে উপরে-নিচে লাফালাফি করবে)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.offset(y = if (dailyGiftReady) giftBounceY.dp else 0.dp)
+                        ) {
+                            CanvasDailyGift(
+                                hasNotification = dailyGiftReady,
+                                dotScale = dotScale,
+                                onClick = { viewModel.navigateTo(GameScreen.DAILY_REWARDS) }
+                            )
+
+                            Text(
+                                text = "Daily Reward",
+                                color = Color(0xFFFEF3C7),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
                     }
                 }
 
@@ -292,22 +367,26 @@ fun HomeScreen(viewModel: GameViewModel) {
     }
 }
 
+/**
+ * ঘূর্ণায়মান ৩ডি লাকি হুইল
+ */
 @Composable
 fun CanvasLuckyWheel(
+    rotationDegrees: Float,
     hasNotification: Boolean,
     dotScale: Float,
     onClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
-            .size(64.dp)
+            .size(62.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.size(54.dp)) {
+        Canvas(modifier = Modifier.size(52.dp)) {
             val center = Offset(size.width / 2f, size.height / 2f)
             val radius = size.width / 2f
 
@@ -342,15 +421,19 @@ fun CanvasLuckyWheel(
                 Color(0xFFEC4899)
             )
             val sweep = 360f / slices.size
-            slices.forEachIndexed { i, c ->
-                drawArc(
-                    color = c,
-                    startAngle = i * sweep,
-                    sweepAngle = sweep,
-                    useCenter = true,
-                    topLeft = Offset(center.x - innerR, center.y - innerR),
-                    size = Size(innerR * 2, innerR * 2)
-                )
+
+            // হুইলটি কন্টিনিউয়াস রোটেট করবে
+            androidx.compose.ui.graphics.drawscope.rotate(rotationDegrees, pivot = center) {
+                slices.forEachIndexed { i, c ->
+                    drawArc(
+                        color = c,
+                        startAngle = i * sweep,
+                        sweepAngle = sweep,
+                        useCenter = true,
+                        topLeft = Offset(center.x - innerR, center.y - innerR),
+                        size = Size(innerR * 2, innerR * 2)
+                    )
+                }
             }
 
             drawCircle(
@@ -364,6 +447,7 @@ fun CanvasLuckyWheel(
             )
             drawCircle(color = Color.White, radius = 3f, center = center)
 
+            // স্থায়ী টপ পয়েন্টার
             val pointer = Path().apply {
                 moveTo(center.x, center.y - innerR + 1f)
                 lineTo(center.x - 5f, center.y - innerR - 5f)
@@ -378,7 +462,7 @@ fun CanvasLuckyWheel(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .offset(x = (-1).dp, y = 1.dp)
+                    .offset(x = 2.dp, y = (-2).dp)
                     .scale(dotScale)
                     .size(15.dp)
                     .shadow(8.dp, CircleShape)
@@ -390,6 +474,9 @@ fun CanvasLuckyWheel(
     }
 }
 
+/**
+ * ৩ডি গিফট বক্স
+ */
 @Composable
 fun CanvasDailyGift(
     hasNotification: Boolean,
@@ -398,14 +485,14 @@ fun CanvasDailyGift(
 ) {
     Box(
         modifier = Modifier
-            .size(64.dp)
+            .size(62.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.size(52.dp)) {
+        Canvas(modifier = Modifier.size(50.dp)) {
             val w = size.width
             val h = size.height
 
@@ -500,7 +587,7 @@ fun CanvasDailyGift(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .offset(x = (-1).dp, y = 1.dp)
+                    .offset(x = 2.dp, y = (-2).dp)
                     .scale(dotScale)
                     .size(15.dp)
                     .shadow(8.dp, CircleShape)
@@ -530,7 +617,6 @@ fun ThreeDPlayButton(
             ) { onClick() }
             .testTag("play_level_btn")
     ) {
-        // 3D Bottom Bevel Lip
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -538,7 +624,6 @@ fun ThreeDPlayButton(
                 .background(Color(0xFF064E3B))
         )
 
-        // Top 3D Pressable Surface
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -578,4 +663,3 @@ fun ThreeDPlayButton(
             }
         }
     }
-}

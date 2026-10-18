@@ -403,7 +403,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             soundManager.playWallBounce()
         }
 
-        // 1. FIREBALL STRAIGHT PIERCE: রাস্তার সব বাবল ভস্মীভূত করে স্ক্রিনের বাইরে চলে যাবে
+        // 1. FIREBALL STRAIGHT PIERCE: পথের সব বাবল ভস্মীভূত করে স্ক্রিনের বাইরে চলে যাবে
         if (proj.boosterType == BoosterType.FIREBALL) {
             for (r in 0 until hexGrid.maxRows) {
                 for (c in 0 until hexGrid.getColsForRow(r)) {
@@ -432,7 +432,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
             particleSystem.addPopBurst(proj.x, proj.y, BubbleColor.ORANGE)
 
-            // ফায়ারবল স্ক্রিনের ওপরে চলে গেলে কখনোই সিলিংয়ে আটকাবে না (DO NOT ATTACH!)
+            // ফায়ারবল স্ক্রিনের ওপরে চলে গেলে কখনোই আটকাবে না
             if (proj.y <= 0f) {
                 currentProjectile = null
                 resolveFireballExit(bubbleRadius, screenWidth)
@@ -441,7 +441,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        // Ceiling collision (for regular bubbles)
+        // Ceiling collision
         if (proj.y <= bubbleRadius) {
             attachAndResolve(proj, bubbleRadius, screenWidth)
             return
@@ -464,9 +464,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * ফায়ারবল বের হয়ে যাওয়ার পর বিচ্ছিন্ন বাবলগুলো ড্রপ করা এবং পরবর্তী শট রেডি করা
-     */
     private fun resolveFireballExit(bubbleRadius: Float, screenWidth: Float) {
         _gameplayState.update { it.copy(playState = PlayState.RESOLVING) }
 
@@ -542,7 +539,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 isMatchSuccessful = true
                 soundManager.playBombExplosion()
             }
-            // 2. LIGHTNING BALL: যে জায়গায় লাগবে সেই স্পটের ৪ থেকে ৫টি বাবল ধ্বংস করবে
+            // 2. LIGHTNING BALL: ৪ থেকে ৫টি বাবল ধ্বংস করবে
             BoosterType.LIGHTNING_BUBBLE -> {
                 val lightningTargets = mutableSetOf<GridCoord>()
                 lightningTargets.add(GridCoord(hitRow, hitCol))
@@ -589,7 +586,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 if (b != null) {
                     val (cx, cy) = hexGrid.getCenter(coord.row, coord.col, bubbleRadius, screenWidth)
 
-                    // লাইটনিং হলে বিশেষ ইলেকট্রিক শকওয়েভ বার্স্ট হবে
                     if (booster == BoosterType.LIGHTNING_BUBBLE) {
                         particleSystem.addLightningBurst(cx, cy)
                     } else {
@@ -772,6 +768,18 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (repository.spendCoins(booster.costCoins)) {
             _saveState.value = repository.addBooster(booster, 1)
             soundManager.playPetRescueChime()
+        }
+    }
+
+    /**
+     * 24 Hours Free Royal Chest Claim
+     */
+    fun claimFreeChest() {
+        val (success, newState) = repository.claimFreeChest()
+        if (success) {
+            _saveState.value = newState
+            soundManager.playPetRescueChime()
+            particleSystem.addScorePopup(360f, 400f, "+200 COINS!", androidx.compose.ui.graphics.Color(0xFFFFD700))
         }
     }
 

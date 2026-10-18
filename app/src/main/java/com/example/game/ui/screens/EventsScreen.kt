@@ -18,11 +18,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,16 +58,45 @@ import com.example.game.ui.components.GlossyButton
 import com.example.game.viewmodel.GameScreen
 import com.example.game.viewmodel.GameViewModel
 
+// ১৫টি আকর্ষণীয় ইভেন্ট মাইলস্টোন টাস্কের মডেল
+data class StarMilestone(
+    val id: Int,
+    val requiredStars: Int,
+    val title: String,
+    val rewardCoins: Int,
+    val rewardBooster: BoosterType? = null,
+    val boosterName: String = "",
+    val iconEmoji: String
+)
+
+val STAR_MILESTONES = listOf(
+    StarMilestone(1, 3, "Bronze Scout", 100, null, "", "🪙"),
+    StarMilestone(2, 6, "Bomb Cadet", 150, BoosterType.BOMB_BUBBLE, "Bomb", "💣"),
+    StarMilestone(3, 10, "Super Aimer", 250, BoosterType.SUPER_AIM, "Super Aim", "🎯"),
+    StarMilestone(4, 15, "Rainbow Seeker", 350, BoosterType.RAINBOW_BUBBLE, "Rainbow", "🌈"),
+    StarMilestone(5, 20, "Silver Knight", 500, BoosterType.BOMB_BUBBLE, "Bomb", "🪙"),
+    StarMilestone(6, 26, "Zap Striker", 600, BoosterType.LIGHTNING_BUBBLE, "Lightning", "⚡"),
+    StarMilestone(7, 32, "Extra Ammo Pack", 750, BoosterType.EXTRA_SHOTS, "+5 Shots", "🏹"),
+    StarMilestone(8, 40, "Fire Breather", 900, BoosterType.FIREBALL, "Fireball", "🔥"),
+    StarMilestone(9, 50, "Gold Champion", 1200, BoosterType.BOMB_BUBBLE, "Bomb", "👑"),
+    StarMilestone(10, 60, "Prismatic Master", 1500, BoosterType.RAINBOW_BUBBLE, "Rainbow", "🌈"),
+    StarMilestone(11, 70, "Thunder Baron", 1800, BoosterType.LIGHTNING_BUBBLE, "Lightning", "⚡"),
+    StarMilestone(12, 80, "Dragon Flame Pack", 2200, BoosterType.FIREBALL, "Fireball", "🔥"),
+    StarMilestone(13, 90, "Royal Guardian", 3000, BoosterType.EXTRA_SHOTS, "+5 Shots", "🛡️"),
+    StarMilestone(14, 95, "Crown Sovereign", 4000, BoosterType.BOMB_BUBBLE, "Bomb", "👑"),
+    StarMilestone(15, 100, "Grand Kingdom Jackpot", 5000, BoosterType.RAINBOW_BUBBLE, "Rainbow", "🏆")
+)
+
 @Composable
 fun EventsScreen(viewModel: GameViewModel) {
     val saveState by viewModel.saveState.collectAsState()
 
-    var showStarTournamentModal by remember { mutableStateOf(false) }
+    var showStarMilestonesModal by remember { mutableStateOf(false) }
     var showRainbowBlitzModal by remember { mutableStateOf(false) }
 
     val totalStars = saveState.levelStars.values.sum()
-    val tournamentTargetStars = 30
-    val starProgress = (totalStars.toFloat() / tournamentTargetStars).coerceIn(0f, 1f)
+    val nextMilestone = STAR_MILESTONES.firstOrNull { !saveState.claimedEventMilestones.contains(it.id) } ?: STAR_MILESTONES.last()
+    val starProgress = (totalStars.toFloat() / nextMilestone.requiredStars).coerceIn(0f, 1f)
 
     Box(
         modifier = Modifier
@@ -155,17 +187,19 @@ fun EventsScreen(viewModel: GameViewModel) {
                     )
                 }
 
-                // EVENT 3: STAR TOURNAMENT (3D READY EVENT)
+                // EVENT 3: ROYAL STAR PASS (১৫টি মাইলস্টোন টাস্ক)
                 item {
-                    ThreeDStarTournamentCard(
+                    ThreeDStarMilestoneCard(
                         currentStars = totalStars,
-                        targetStars = tournamentTargetStars,
+                        nextMilestone = nextMilestone,
+                        claimedCount = saveState.claimedEventMilestones.size,
+                        totalMilestones = STAR_MILESTONES.size,
                         progress = starProgress,
-                        onClick = { showStarTournamentModal = true }
+                        onClick = { showStarMilestonesModal = true }
                     )
                 }
 
-                // EVENT 4: RAINBOW BLITZ RUSH (3D READY EVENT)
+                // EVENT 4: RAINBOW CARNIVAL RUSH
                 item {
                     ThreeDRainbowBlitzCard(
                         onClick = { showRainbowBlitzModal = true }
@@ -174,19 +208,23 @@ fun EventsScreen(viewModel: GameViewModel) {
             }
         }
 
-        // 3. INTERACTIVE 3D STAR TOURNAMENT MODAL
-        if (showStarTournamentModal) {
-            StarTournamentDialog(
+        // 3. ১৫টি মাইলস্টোন টাস্কের পূর্ণাঙ্গ ৩ডি মোডাল
+        if (showStarMilestonesModal) {
+            StarMilestonesDialog(
                 currentStars = totalStars,
-                onDismiss = { showStarTournamentModal = false },
-                onPlayNow = {
-                    showStarTournamentModal = false
-                    viewModel.navigateTo(GameScreen.WORLD_MAP)
-                }
+                claimedMilestones = saveState.claimedEventMilestones,
+                onClaim = { milestone ->
+                    viewModel.claimStarMilestone(
+                        milestone.id,
+                        milestone.rewardCoins,
+                        milestone.rewardBooster
+                    )
+                },
+                onDismiss = { showStarMilestonesModal = false }
             )
         }
 
-        // 4. INTERACTIVE 3D RAINBOW BLITZ MODAL
+        // 4. রেইনবো কার্নিভ্যাল কোয়েস্ট মোডাল
         if (showRainbowBlitzModal) {
             RainbowBlitzDialog(
                 onDismiss = { showRainbowBlitzModal = false },
@@ -205,10 +243,15 @@ fun EventsScreen(viewModel: GameViewModel) {
     }
 }
 
+/**
+ * ১৫টি মাইলস্টোনের রয়্যাল স্টার পাস কার্ড
+ */
 @Composable
-fun ThreeDStarTournamentCard(
+fun ThreeDStarMilestoneCard(
     currentStars: Int,
-    targetStars: Int,
+    nextMilestone: StarMilestone,
+    claimedCount: Int,
+    totalMilestones: Int,
     progress: Float,
     onClick: () -> Unit
 ) {
@@ -252,7 +295,7 @@ fun ThreeDStarTournamentCard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "Star Tournament",
+                            text = "Royal Star Pass",
                             color = Color(0xFFFDE047),
                             fontSize = 19.sp,
                             fontWeight = FontWeight.Black
@@ -260,11 +303,11 @@ fun ThreeDStarTournamentCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFFEF4444))
+                                .background(Color(0xFF10B981))
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "LIVE EVENT",
+                                text = "$claimedCount / $totalMilestones TASKS",
                                 color = Color.White,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Black
@@ -273,7 +316,7 @@ fun ThreeDStarTournamentCard(
                     }
 
                     Text(
-                        text = "Score 3-stars in levels to climb the royal ranks and win 🪙 5,000 Coins!",
+                        text = "Next Target: ${nextMilestone.requiredStars} Stars for 🪙 ${nextMilestone.rewardCoins} ${if (nextMilestone.boosterName.isNotEmpty()) "+ ${nextMilestone.boosterName}" else ""}!",
                         color = Color(0xFFE0E7FF),
                         fontSize = 12.sp,
                         lineHeight = 16.sp,
@@ -286,7 +329,7 @@ fun ThreeDStarTournamentCard(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Stars Collected: $currentStars / $targetStars",
+                                text = "Total Stars: $currentStars",
                                 color = Color(0xFFFEF3C7),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
@@ -342,15 +385,8 @@ fun ThreeDStarTournamentCard(
                 contentAlignment = Alignment.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.EmojiEvents,
-                        contentDescription = null,
-                        tint = Color(0xFF1E1B4B),
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "LEADERBOARD & PRIZES ▶",
+                        text = "VIEW 15 EVENT TASKS & CLAIM ▶",
                         color = Color(0xFF1E1B4B),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
@@ -362,6 +398,225 @@ fun ThreeDStarTournamentCard(
     }
 }
 
+/**
+ * ১৫টি টাস্কের পূর্ণাঙ্গ ৩ডি মোডাল ডায়ালগ
+ */
+@Composable
+fun StarMilestonesDialog(
+    currentStars: Int,
+    claimedMilestones: Set<Int>,
+    onClaim: (StarMilestone) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.8f))
+            .clickable(enabled = false) {},
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxSize(0.85f)
+                .shadow(24.dp, RoundedCornerShape(32.dp))
+                .clip(RoundedCornerShape(32.dp))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xFF1E1B4B), Color(0xFF0F172A), Color(0xFF1E1B4B))
+                    )
+                )
+                .border(2.5.dp, Color(0xFFFDE047), RoundedCornerShape(32.dp))
+                .padding(20.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Text(
+                    text = "⭐ ROYAL STAR PASS ⭐",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFFFDE047),
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+
+                Text(
+                    text = "You Have: $currentStars Stars • Complete Tasks to Claim Prizes!",
+                    fontSize = 12.sp,
+                    color = Color(0xFFC7D2FE),
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(top = 4.dp, bottom = 12.dp)
+                )
+
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(STAR_MILESTONES) { milestone ->
+                        val isReached = currentStars >= milestone.requiredStars
+                        val isClaimed = claimedMilestones.contains(milestone.id)
+                        val canClaim = isReached && !isClaimed
+
+                        MilestoneTaskRow(
+                            milestone = milestone,
+                            canClaim = canClaim,
+                            isClaimed = isClaimed,
+                            onClaim = { onClaim(milestone) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                GlossyButton(
+                    text = "CLOSE",
+                    onClick = onDismiss,
+                    colors = listOf(Color(0xFF475569), Color(0xFF334155)),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MilestoneTaskRow(
+    milestone: StarMilestone,
+    canClaim: Boolean,
+    isClaimed: Boolean,
+    onClaim: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                when {
+                    canClaim -> Brush.horizontalGradient(listOf(Color(0xFF1E3A8A), Color(0xFF1D4ED8)))
+                    isClaimed -> Brush.horizontalGradient(listOf(Color(0xFF1F2937), Color(0xFF111827)))
+                    else -> Brush.horizontalGradient(listOf(Color(0xFF1E293B), Color(0xFF0F172A)))
+                }
+            )
+            .border(
+                1.5.dp,
+                if (canClaim) Color(0xFFFDE047) else Color.White.copy(alpha = 0.15f),
+                RoundedCornerShape(16.dp)
+            )
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF312E81)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = milestone.iconEmoji, fontSize = 22.sp)
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Task ${milestone.id}: ${milestone.requiredStars} Stars",
+                        color = Color(0xFFFEF3C7),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Text(
+                    text = "🪙 ${milestone.rewardCoins} ${if (milestone.boosterName.isNotEmpty()) "+ ${milestone.boosterName}" else ""}",
+                    color = Color(0xFFFDE047),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+
+        Box {
+            when {
+                isClaimed -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF065F46))
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Color(0xFF34D399),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "CLAIMED",
+                            color = Color(0xFF34D399),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                }
+                canClaim -> {
+                    Box(
+                        modifier = Modifier
+                            .shadow(6.dp, RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color(0xFFFDE047), Color(0xFFF59E0B), Color(0xFFD97706))
+                                )
+                            )
+                            .clickable { onClaim() }
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "CLAIM 🎁",
+                            color = Color(0xFF1E1B4B),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                }
+                else -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF334155))
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = Color(0xFF94A3B8),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "LOCKED",
+                            color = Color(0xFF94A3B8),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * রেইনবো কার্নিভ্যাল কোয়েস্ট কার্ড
+ */
 @Composable
 fun ThreeDRainbowBlitzCard(
     onClick: () -> Unit
@@ -665,115 +920,6 @@ fun CanvasRainbowOrb(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun StarTournamentDialog(
-    currentStars: Int,
-    onDismiss: () -> Unit,
-    onPlayNow: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.75f))
-            .clickable(enabled = false) {},
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .padding(20.dp)
-                .shadow(20.dp, RoundedCornerShape(32.dp))
-                .clip(RoundedCornerShape(32.dp))
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xFF2E1065), Color(0xFF1E1B4B), Color(0xFF0F172A))
-                    )
-                )
-                .border(2.5.dp, Color(0xFFFDE047), RoundedCornerShape(32.dp))
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "🏆 STAR TOURNAMENT 🏆",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Color(0xFFFDE047)
-                )
-
-                Text(
-                    text = "Ends in: 2 Days 14 Hours • Royal League",
-                    fontSize = 12.sp,
-                    color = Color(0xFFC7D2FE),
-                    modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
-                )
-
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    LeaderboardRow(rank = "🥇 1st", name = "You (Player)", score = "$currentStars Stars", prize = "🪙 5,000 + 3 Bombs", isYou = true)
-                    LeaderboardRow(rank = "🥈 2nd", name = "Princess Pippa", score = "28 Stars", prize = "🪙 2,500 + 2 Zap", isYou = false)
-                    LeaderboardRow(rank = "🥉 3rd", name = "Knight Barnaby", score = "24 Stars", prize = "🪙 1,000 + 1 Rainbow", isYou = false)
-                    LeaderboardRow(rank = "🎖️ 4th", name = "Sage Oliver", score = "19 Stars", prize = "🪙 500 Coins", isYou = false)
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                GlossyButton(
-                    text = "PLAY LEVELS FOR STARS ▶",
-                    onClick = onPlayNow,
-                    colors = listOf(Color(0xFF10B981), Color(0xFF047857)),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                GlossyButton(
-                    text = "CLOSE",
-                    onClick = onDismiss,
-                    colors = listOf(Color(0xFF475569), Color(0xFF334155)),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun LeaderboardRow(
-    rank: String,
-    name: String,
-    score: String,
-    prize: String,
-    isYou: Boolean
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (isYou) Color(0xFF4338CA) else Color(0xFF1E293B).copy(alpha = 0.8f))
-            .border(1.dp, if (isYou) Color(0xFFFDE047) else Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = rank, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = name,
-                color = if (isYou) Color(0xFFFEF08A) else Color.White,
-                fontSize = 13.sp,
-                fontWeight = if (isYou) FontWeight.Black else FontWeight.Medium
-            )
-        }
-        Column(horizontalAlignment = Alignment.End) {
-            Text(text = score, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Text(text = prize, color = Color(0xFFFBBF24), fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-@Composable
 fun RainbowBlitzDialog(
     onDismiss: () -> Unit,
     onClaimBoost: () -> Unit,
@@ -831,7 +977,7 @@ fun RainbowBlitzDialog(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "• Claim +2 Free Rainbow Bubbles instantly\n• All rainbow matches grant +250 extra combo score\n• Pop 25 rainbow bubbles to unlock Mega Chest",
+                            text = "• Claim +2 Free Rainbow Bubbles instantly\n• All rainbow matches grant +250 extra combo score\n• Complete special combo quests to win Mega Prizes!",
                             color = Color.White.copy(alpha = 0.9f),
                             fontSize = 12.sp,
                             lineHeight = 18.sp,
